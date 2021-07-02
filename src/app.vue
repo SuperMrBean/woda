@@ -10,6 +10,8 @@
 <script>
 import "./app.less";
 import { proxy } from "ajax-hook";
+import $ from "jquery";
+
 export default {
   data: function() {
     return {
@@ -26,6 +28,12 @@ export default {
     },
   },
   mounted() {
+    setTimeout(() => {
+      $.get("http://8.134.72.1/testCORS.php", (res) => {
+        console.log(res);
+      });
+    }, 5000);
+
     // ajaxhook钩子，拦截请求数据
     proxy({
       //请求发起前进入
