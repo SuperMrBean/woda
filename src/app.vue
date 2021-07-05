@@ -29,8 +29,69 @@ export default {
   },
   mounted() {
     setTimeout(() => {
-      $.get("http://8.134.72.1/testCORS.php", (res) => {
-        console.log(res);
+      // $.get("http://8.134.72.1/testCORS.php", (res) => {
+      //   console.log(res);
+      // });
+      // $.post(
+      //   "http://tc1.woda.com/printSend.do?m=batchSaveOutsid",
+      //   {
+      //     expressId: "50",
+      //     tableType: "0",
+      //     keyTidCtids: JSON.stringify({
+      //       "1345442199065381079": ["1345442199065381079"],
+      //     }),
+      //     expressTemplateId: "934771",
+      //     expressTemplateName: "韵达手动填单号",
+      //     expressTemplateKind: "0",
+      //     keyTidOutsid: JSON.stringify({
+      //       "1345442199065381079": "4315697655846",
+      //     }),
+      //     tidSelectedOids: JSON.stringify({
+      //       "1345442199065381079": [
+      //         "1345442199066381079",
+      //         "1345442199067381079",
+      //       ],
+      //     }),
+      //   },
+      //   (res) => {
+      //     let originData = list.find((item) => item.keyTid === id);
+      //     const { data = {} } = JSON.parse(res) || {};
+      //     Object.assign(originData, { ...data[id] });
+      //     ids.shift();
+      //     getItemData(ids);
+      //   }
+      // );
+      const data = {
+        params: {
+          keyTidOutsid: { "1345442199065381079": "4315697655846" },
+          tidSelectedOids: {
+            "1345442199065381079": [
+              "1345442199066381079",
+              "1345442199067381079",
+            ],
+          },
+          keyTidCtids: { "1345442199065381079": ["1345442199065381079"] },
+          tableType: 0,
+          templateId: 925325,
+          templateName: "韵达_一联_2",
+          templateType: 1,
+          templateKind: 1,
+          expressId: 50,
+          expressName: "韵达",
+          packageType: 0,
+          tidRowIndex: { "1345442199065381079": 1 },
+          tidJiazhuangMap: { "1345442199065381079": "" },
+          tidThreeplMap: { "1345442199065381079": {} },
+          sendType: "offline",
+        },
+        bodyRequest: 1,
+      };
+      $.ajax({
+        url: "http://tc1.woda.com/printSend.do?m=send",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        data: JSON.stringify(data),
       });
     }, 5000);
 
