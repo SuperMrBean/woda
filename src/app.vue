@@ -1,10 +1,26 @@
 <template>
-  <div class="table" v-if="show">
+  <div class="main" v-if="show">
     <span class="close" @click="onClose">x</span>
-    <div>{{ list.length }}</div>
+    <div class="header">
+      <div class="item">
+        <div class="label">当前登录账号：</div>
+        <div class="content">159****4223</div>
+      </div>
+      <div class="item">
+        <div class="label">绑定店铺：</div>
+        <div class="content">我的小店</div>
+      </div>
+      <div class="item">
+        <div class="label">可用余额：</div>
+        <div class="content">￥999.99</div>
+      </div>
+    </div>
+    <div class="talbe">
+      adb
+    </div>
   </div>
-  <el-button class="btnHide" @click="onOpen" v-else type="primary"
-    >open</el-button
+  <el-button class="loadBtn" @click="onOpen" v-else type="primary"
+    >加载推送脚本</el-button
   >
 </template>
 <script>
@@ -38,6 +54,7 @@ export default {
           if (url.indexOf("/trade-pack/find-pack-list") > -1) {
             const { content = [] } = JSON.parse(data) || {};
             this.list = content;
+            console.log(this.list)
           }
           handler.next(response);
         },
@@ -111,32 +128,3 @@ export default {
   },
 };
 </script>
-<style scoped lang="less">
-.table {
-  position: fixed;
-  text-align: center;
-  width: 100%;
-  height: 400px;
-  top: 0;
-  right: 0;
-  z-index: 99999;
-  background: #fc2;
-  .close {
-    position: absolute;
-    right: 0px;
-    top: 0px;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-}
-
-.btnHide {
-  position: fixed;
-  top: 0;
-  right: 0;
-  z-index: 99999;
-}
-</style>
