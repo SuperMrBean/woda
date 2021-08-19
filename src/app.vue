@@ -1,27 +1,150 @@
 <template>
-  <div class="main" v-if="show">
-    <span class="close" @click="onClose">x</span>
-    <div class="header">
-      <div class="item">
-        <div class="label">当前登录账号：</div>
-        <div class="content">159****4223</div>
+  <div>
+    <div class="main" v-if="show">
+      <div class="header">
+        <div class="item">
+          <div class="label">当前登录账号：</div>
+          <div class="content">159****4223</div>
+        </div>
+        <div class="item">
+          <div class="label">绑定店铺：</div>
+          <div class="content">我的小店</div>
+        </div>
+        <div class="item">
+          <div class="label">可用余额：</div>
+          <div class="content">￥999.99</div>
+        </div>
+        <div class="item">
+          <div class="label">推送后操作：</div>
+          <div class="content">
+            <el-select v-model="pushType" placeholder="请选择" size="mini">
+              <el-option label="直接发货" value="send"> </el-option>
+              <el-option label="保存运单" value="save"> </el-option>
+            </el-select>
+          </div>
+        </div>
+        <el-button size="mini" style="margin-left:10px" type="primary"
+          >查看回调记录</el-button
+        >
+        <el-button size="mini" type="primary">历史订单查询</el-button>
+        <el-button size="mini" type="primary">添加自由订单</el-button>
       </div>
-      <div class="item">
-        <div class="label">绑定店铺：</div>
-        <div class="content">我的小店</div>
-      </div>
-      <div class="item">
-        <div class="label">可用余额：</div>
-        <div class="content">￥999.99</div>
+      <div class="table">
+        <div class="head">
+          <el-row>
+            <el-col :span="12"><div class="item">商品</div></el-col>
+            <el-col :span="3"><div class="item">数量</div></el-col>
+            <el-col :span="6"><div class="item">地址</div></el-col>
+            <el-col :span="3"><div class="item">操作</div></el-col>
+          </el-row>
+        </div>
+        <div class="body">
+          <div class="line" v-for="(item, index) in list" :key="index">
+            <div class="statusBar">
+              <div class="left">
+                <div class="orderId">订单号：{{ item.trades[0].tid }}</div>
+                <div class="ali"><i class="icon" />{{ item.buyerNick }}</div>
+                <div class="time">{{ item.minPayTime }}</div>
+                <div class="merge" v-if="item.isPacked">
+                  有合并订单
+                </div>
+              </div>
+              <div class="right">
+                <i class="flag" />
+                <i class="remark" />
+              </div>
+            </div>
+            <!-- <div class="message">我是玩家留言</div> -->
+            <div
+              class="trades"
+              v-for="(tradeItem, tradeIndex) in item.trades"
+              :key="tradeIndex"
+            >
+              <el-row v-if="tradeIndex > 0">
+                <el-col :span="14">
+                  <div class="subOrderId">子订单号：{{ tradeItem.tid }}</div>
+                </el-col>
+              </el-row>
+              <div class="orders">
+                <el-row style="display:flex;align-items:center">
+                  <el-col :span="12">
+                    <div
+                      class="shop"
+                      v-for="(orderItem, orderIndex) in tradeItem.orders"
+                      :key="orderIndex"
+                    >
+                      <div class="pic">
+                        <img :src="orderItem.picPath" alt="" />
+                      </div>
+                      <div class="right">
+                        <div class="title">{{ orderItem.title }}</div>
+                        <div class="desc ">
+                          {{
+                            orderItem.skuPropertiesName
+                              ? orderItem.skuPropertiesName
+                              : "无"
+                          }}
+                        </div>
+                        <div>
+                          商家编码：
+                          <div class="sku">
+                            {{
+                              orderItem.outerSkuId
+                                ? orderItem.outerSkuId
+                                : orderItem.outerIid
+                            }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </el-col>
+                  <el-col :span="3"
+                    ><div
+                      class="amount"
+                      v-for="(orderItem, orderIndex) in tradeItem.orders"
+                      :key="orderIndex"
+                    >
+                      x {{ orderItem.num }}
+                    </div></el-col
+                  >
+                  <el-col :span="6" v-if="tradeIndex === 0">
+                    <div class="address">
+                      <div>{{ item.encryptReceiverInfo.receiverName }}</div>
+                      <div>{{ item.encryptReceiverInfo.receiverMobile }}</div>
+                      <div>
+                        {{
+                          `${item.encryptReceiverInfo.receiverCountry ||
+                            ""} ${item.encryptReceiverInfo.receiverState ||
+                            ""} ${item.encryptReceiverInfo.receiverCity ||
+                            ""} ${item.encryptReceiverInfo.receiverTown ||
+                            ""} ${item.encryptReceiverInfo.receiverDistrict ||
+                            ""} ${item.encryptReceiverInfo.receiverAddress ||
+                            ""}`
+                        }}
+                      </div>
+                    </div>
+                  </el-col>
+                  <el-col :span="3">
+                    <div class="operation" v-if="tradeIndex === 0">
+                      <div style="text-align:center">
+                        <el-button type="primary" size="mini">推送</el-button>
+                      </div>
+                      <div style="text-align:center;margin-top:10px;">
+                        <el-button type="text" size="mini">修改订单</el-button>
+                      </div>
+                    </div>
+                  </el-col>
+                </el-row>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="talbe">
-      adb
-    </div>
+    <el-button class="loadBtn" @click="onLoad" type="primary">{{
+      show ? "关闭推送脚本" : "加载推送脚本"
+    }}</el-button>
   </div>
-  <el-button class="loadBtn" @click="onOpen" v-else type="primary"
-    >加载推送脚本</el-button
-  >
 </template>
 <script>
 import "./app.less";
@@ -31,8 +154,9 @@ import $ from "jquery";
 export default {
   data: function() {
     return {
-      show: false,
+      show: true,
       list: [],
+      pushType: null,
     };
   },
   methods: {
@@ -54,17 +178,14 @@ export default {
           if (url.indexOf("/trade-pack/find-pack-list") > -1) {
             const { content = [] } = JSON.parse(data) || {};
             this.list = content;
-            console.log(this.list)
+            console.log(this.list);
           }
           handler.next(response);
         },
       });
     },
-    onOpen() {
-      this.show = true;
-    },
-    onClose() {
-      this.show = false;
+    onLoad() {
+      this.show = !this.show;
     },
   },
   mounted() {
@@ -128,3 +249,4 @@ export default {
   },
 };
 </script>
+<style lang="less" scoped></style>
