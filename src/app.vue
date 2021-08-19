@@ -50,7 +50,16 @@
                 </div>
               </div>
               <div class="right">
-                <i class="flag" />
+                <i
+                  v-bind:class="{
+                    flagGrey: item.trades[0].sellerFlag === 0,
+                    flagRed: item.trades[0].sellerFlag === 1,
+                    flagYellow: item.trades[0].sellerFlag === 2,
+                    flagGeen: item.trades[0].sellerFlag === 3,
+                    flagBlue: item.trades[0].sellerFlag === 4,
+                    flagPurple: item.trades[0].sellerFlag === 5,
+                  }"
+                />
                 <i class="remark" />
               </div>
             </div>
