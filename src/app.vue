@@ -40,7 +40,17 @@
         </div>
         <div class="body">
           <div class="line" v-for="(item, index) in list" :key="index">
-            <div class="statusBar">
+            <div
+              class="statusBar"
+              v-bind:class="{
+                statusGrey: item.trades[0].sellerFlag === 0,
+                statusRed: item.trades[0].sellerFlag === 1,
+                statusYellow: item.trades[0].sellerFlag === 2,
+                statusGreen: item.trades[0].sellerFlag === 3,
+                statusBlue: item.trades[0].sellerFlag === 4,
+                statusPurple: item.trades[0].sellerFlag === 5,
+              }"
+            >
               <div class="left">
                 <div class="orderId">订单号：{{ item.trades[0].tid }}</div>
                 <div class="ali"><i class="icon" />{{ item.buyerNick }}</div>
@@ -55,25 +65,72 @@
                     flagGrey: item.trades[0].sellerFlag === 0,
                     flagRed: item.trades[0].sellerFlag === 1,
                     flagYellow: item.trades[0].sellerFlag === 2,
-                    flagGeen: item.trades[0].sellerFlag === 3,
+                    flagGreen: item.trades[0].sellerFlag === 3,
                     flagBlue: item.trades[0].sellerFlag === 4,
                     flagPurple: item.trades[0].sellerFlag === 5,
                   }"
                 />
-                <i class="remark" />
+
+                <el-tooltip
+                  v-if="item.trades[0].sellerMemo"
+                  class="item"
+                  effect="dark"
+                  :content="item.trades[0].sellerMemo"
+                  placement="top-end"
+                >
+                  <i class="remark" />
+                </el-tooltip>
               </div>
             </div>
-            <!-- <div class="message">我是玩家留言</div> -->
+            <div
+              class="message"
+              v-if="item.trades.map((trade) => trade.sellerMemo).join('，')"
+            >
+              <div>此订单有买家留言，请注意处理：</div>
+              <div>
+                {{ item.trades.map((trade) => trade.sellerMemo).join("，") }}
+              </div>
+            </div>
             <div
               class="trades"
               v-for="(tradeItem, tradeIndex) in item.trades"
               :key="tradeIndex"
             >
-              <el-row v-if="tradeIndex > 0">
-                <el-col :span="14">
-                  <div class="subOrderId">子订单号：{{ tradeItem.tid }}</div>
-                </el-col>
-              </el-row>
+              <div
+                class="subOrderId"
+                v-bind:class="{
+                  statusGrey: tradeItem.sellerFlag === 0,
+                  statusRed: tradeItem.sellerFlag === 1,
+                  statusYellow: tradeItem.sellerFlag === 2,
+                  statusGreen: tradeItem.sellerFlag === 3,
+                  statusBlue: tradeItem.sellerFlag === 4,
+                  statusPurple: tradeItem.sellerFlag === 5,
+                }"
+                v-if="tradeIndex > 0"
+              >
+                <div class="left">子订单号：{{ tradeItem.tid }}</div>
+                <div class="right">
+                  <i
+                    v-bind:class="{
+                      flagGrey: tradeItem.sellerFlag === 0,
+                      flagRed: tradeItem.sellerFlag === 1,
+                      flagYellow: tradeItem.sellerFlag === 2,
+                      flagGreen: tradeItem.sellerFlag === 3,
+                      flagBlue: tradeItem.sellerFlag === 4,
+                      flagPurple: tradeItem.sellerFlag === 5,
+                    }"
+                  />
+                  <el-tooltip
+                    v-if="tradeItem.sellerMemo"
+                    class="item"
+                    effect="dark"
+                    :content="tradeItem.sellerMemo"
+                    placement="top-end"
+                  >
+                    <i class="remark" />
+                  </el-tooltip>
+                </div>
+              </div>
               <div class="orders">
                 <el-row style="display:flex;align-items:center">
                   <el-col :span="12">
@@ -136,7 +193,17 @@
                   <el-col :span="3">
                     <div class="operation" v-if="tradeIndex === 0">
                       <div style="text-align:center">
-                        <el-button type="primary" size="mini">推送</el-button>
+                        <el-button
+                          type="primary"
+                          size="mini"
+                          v-if="tradeItem.sellerFlag === 2"
+                          style="background:#FFAB00;border-color:#FFAB00"
+                        >
+                          异常
+                        </el-button>
+                        <el-button type="primary" size="mini" v-else>
+                          推送
+                        </el-button>
                       </div>
                       <div style="text-align:center;margin-top:10px;">
                         <el-button type="text" size="mini">修改订单</el-button>

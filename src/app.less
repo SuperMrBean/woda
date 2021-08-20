@@ -43,7 +43,6 @@
         border-bottom: 1px solid #eee;
         .statusBar {
           padding: 0 20px;
-          background: rgba(150, 160, 173, 0.2);
           height: 40px;
           display: flex;
           align-items: center;
@@ -127,6 +126,7 @@
               background-size: 100%;
             }
             .remark {
+              display: block;
               margin-left: 24px;
               cursor: pointer;
               width: 14px;
@@ -136,13 +136,92 @@
             }
           }
         }
+        .statusGrey {
+          background: rgba(150, 160, 173, 0.2);
+        }
+        .statusRed {
+          background: rgba(249, 84, 93, 0.2);
+        }
+        .statusYellow {
+          background: rgba(255, 171, 0, 0.2);
+        }
+        .statusGreen {
+          background: #f6ffed;
+        }
+        .statusBlue {
+          background: rgba(51, 97, 216, 0.1);
+        }
+        .statusPurple {
+          background: rgba(101, 84, 192, 0.1);
+        }
         .trades {
           .subOrderId {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-top: 20px;
             height: 26px;
             line-height: 26px;
-            padding-left: 20px;
-            background: rgba(150, 160, 173, 0.2);
+            padding: 0px 20px;
+            .left {
+              display: flex;
+              align-items: center;
+            }
+            .right {
+              display: flex;
+              align-items: center;
+              .flagGrey {
+                cursor: pointer;
+                width: 14px;
+                height: 14px;
+                background: url("./assets/img/flag_grey.png") 0 0 no-repeat;
+                background-size: 100%;
+              }
+              .flagYellow {
+                cursor: pointer;
+                width: 14px;
+                height: 14px;
+                background: url("./assets/img/flag_yellow.png") 0 0 no-repeat;
+                background-size: 100%;
+              }
+              .flagRed {
+                cursor: pointer;
+                width: 14px;
+                height: 14px;
+                background: url("./assets/img/flag_red.png") 0 0 no-repeat;
+                background-size: 100%;
+              }
+              .flagBlue {
+                cursor: pointer;
+                width: 14px;
+                height: 14px;
+                background: url("./assets/img/flag_blue.png") 0 0 no-repeat;
+                background-size: 100%;
+              }
+              .flagGreen {
+                cursor: pointer;
+                width: 14px;
+                height: 14px;
+                background: url("./assets/img/flag_green.png") 0 0 no-repeat;
+                background-size: 100%;
+              }
+              .flagPurple {
+                cursor: pointer;
+                width: 14px;
+                height: 14px;
+                background: url("./assets/img/flag_purple.png") 0 0 no-repeat;
+                background-size: 100%;
+              }
+              .remark {
+                display: block;
+                margin-left: 24px;
+                cursor: pointer;
+                width: 14px;
+                height: 14px;
+                background: url("./assets/img/remark.png") 0 0 no-repeat;
+                background-size: 100%;
+              }
+            }
           }
           .orders {
             .shop {
