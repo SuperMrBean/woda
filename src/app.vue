@@ -32,10 +32,10 @@
       <div class="table">
         <div class="head">
           <el-row>
-            <el-col :span="12"><div class="item">商品</div></el-col>
-            <el-col :span="3"><div class="item">数量</div></el-col>
-            <el-col :span="6"><div class="item">地址</div></el-col>
-            <el-col :span="3"><div class="item">操作</div></el-col>
+            <el-col :span="11"><div class="item">商品</div></el-col>
+            <el-col :span="2"><div class="item">数量</div></el-col>
+            <el-col :span="5"><div class="item">地址</div></el-col>
+            <el-col :span="6"><div class="item">操作</div></el-col>
           </el-row>
         </div>
         <div class="body">
@@ -61,6 +61,7 @@
               </div>
               <div class="right">
                 <i
+                  @click="onOpenFlag(item.trades[0])"
                   v-bind:class="{
                     flagGrey: item.trades[0].sellerFlag === 0,
                     flagRed: item.trades[0].sellerFlag === 1,
@@ -84,11 +85,21 @@
             </div>
             <div
               class="message"
-              v-if="item.trades.map((trade) => trade.sellerMemo).join('，')"
+              v-if="
+                item.trades
+                  .map((trade) => trade.buyerMessage)
+                  .filter((text) => text)
+                  .join('，')
+              "
             >
               <div>此订单有买家留言，请注意处理：</div>
               <div>
-                {{ item.trades.map((trade) => trade.sellerMemo).join("，") }}
+                {{
+                  item.trades
+                    .map((trade) => trade.buyerMessage)
+                    .filter((text) => text)
+                    .join("，")
+                }}
               </div>
             </div>
             <div
@@ -111,6 +122,7 @@
                 <div class="left">子订单号：{{ tradeItem.tid }}</div>
                 <div class="right">
                   <i
+                    @click="onOpenFlag(tradeItem)"
                     v-bind:class="{
                       flagGrey: tradeItem.sellerFlag === 0,
                       flagRed: tradeItem.sellerFlag === 1,
@@ -133,7 +145,7 @@
               </div>
               <div class="orders">
                 <el-row style="display:flex;align-items:center">
-                  <el-col :span="12">
+                  <el-col :span="11">
                     <div
                       class="shop"
                       v-for="(orderItem, orderIndex) in tradeItem.orders"
@@ -164,7 +176,7 @@
                       </div>
                     </div>
                   </el-col>
-                  <el-col :span="3"
+                  <el-col :span="2"
                     ><div
                       class="amount"
                       v-for="(orderItem, orderIndex) in tradeItem.orders"
@@ -173,8 +185,8 @@
                       x {{ orderItem.num }}
                     </div></el-col
                   >
-                  <el-col :span="6" v-if="tradeIndex === 0">
-                    <div class="address">
+                  <el-col :span="5">
+                    <div class="address" v-if="tradeIndex === 0">
                       <div>{{ item.encryptReceiverInfo.receiverName }}</div>
                       <div>{{ item.encryptReceiverInfo.receiverMobile }}</div>
                       <div>
@@ -190,9 +202,9 @@
                       </div>
                     </div>
                   </el-col>
-                  <el-col :span="3">
-                    <div class="operation" v-if="tradeIndex === 0">
-                      <div style="text-align:center">
+                  <el-col :span="6">
+                    <div class="operation">
+                      <div style="text-align:center" v-if="tradeIndex === 0">
                         <el-button
                           type="primary"
                           size="mini"
@@ -205,8 +217,29 @@
                           推送
                         </el-button>
                       </div>
-                      <div style="text-align:center;margin-top:10px;">
+                      <div
+                        style="text-align:center;margin-top:10px;"
+                        v-if="tradeIndex === 0"
+                      >
                         <el-button type="text" size="mini">修改订单</el-button>
+                      </div>
+                      <div class="tipsYellow" v-if="tradeItem.sellerFlag === 2">
+                        <div class="attention">
+                          黄旗备注，请按要求修改订单后再推送
+                        </div>
+                        <div class="memo">{{ tradeItem.sellerMemo }}</div>
+                      </div>
+                      <div class="tipsRed" v-if="tradeItem.sellerFlag === 1">
+                        <div class="attention">
+                          红旗备注，用以下货物替代原本订单货物进行推送
+                        </div>
+                        <div class="memo">{{ tradeItem.sellerMemo }}</div>
+                      </div>
+                      <div class="tipsGreen" v-if="tradeItem.sellerFlag === 3">
+                        <div class="attention">
+                          绿旗备注，以下货物会追加到订单货物一起推送
+                        </div>
+                        <div class="memo">{{ tradeItem.sellerMemo }}</div>
                       </div>
                     </div>
                   </el-col>
@@ -220,6 +253,37 @@
     <el-button class="loadBtn" @click="onLoad" type="primary">{{
       show ? "关闭推送脚本" : "加载推送脚本"
     }}</el-button>
+    <el-dialog
+      width="600px"
+      title="修改旗帜"
+      :visible.sync="dialogFlag.visible"
+      custom-class="dialogFlag"
+      @close="onCloseFlag"
+    >
+      <div class="flag">
+        <el-radio-group v-model="dialogFlag.data.sellerFlag">
+          <el-radio :label="0"><div class="flagGrey"/></el-radio>
+          <el-radio :label="1"><div class="flagRed"/></el-radio>
+          <el-radio :label="2"><div class="flagYellow"/></el-radio>
+          <el-radio :label="3"><div class="flagGreen"/></el-radio>
+          <el-radio :label="4"><div class="flagBlue"/></el-radio>
+          <el-radio :label="5"><div class="flagPurple"/></el-radio>
+        </el-radio-group>
+        <el-input
+          style="margin-top:20px;"
+          v-model="dialogFlag.data.sellerMemo"
+          type="textarea"
+          placeholder="请输入留言信息"
+          rows="6"
+        />
+        <div slot="footer" class="footer">
+          <el-button @click="onCloseFlag">取 消</el-button>
+          <el-button type="primary" @click="onFlagConfirm(dialogFlag.data)"
+            >确 定</el-button
+          >
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 <script>
@@ -233,6 +297,10 @@ export default {
       show: true,
       list: [],
       pushType: null,
+      dialogFlag: {
+        visible: false,
+        data: {},
+      },
     };
   },
   methods: {
@@ -256,12 +324,63 @@ export default {
             this.list = content;
             console.log(this.list);
           }
+          if (url.indexOf("/user/login-user") > -1) {
+            const userInfo = JSON.parse(data) || {};
+            this.userInfo = userInfo;
+          }
           handler.next(response);
         },
       });
     },
     onLoad() {
       this.show = !this.show;
+    },
+    onRefresh() {
+      $(".ant-btn")
+        .find("span:contains('搜索')")
+        .parent()[0]
+        .click();
+    },
+    onOpenFlag(data) {
+      this.dialogFlag.visible = true;
+      this.dialogFlag.data = JSON.parse(JSON.stringify(data));
+    },
+    onCloseFlag() {
+      this.dialogFlag.visible = false;
+      this.dialogFlag.data = {};
+    },
+    onFlagConfirm(dialogFlagData) {
+      console.log(dialogFlagData);
+      const { tid = "", sellerMemo = "", sellerFlag = null } =
+        dialogFlagData || {};
+      const { defaultShopId = null } = this.userInfo || {};
+      const data = {
+        apiMethodName: "taobao.trade.memo.update",
+        textParams: {
+          tid,
+          memo: sellerMemo,
+          flag: sellerFlag,
+          reset: false,
+        },
+        shopId: defaultShopId,
+      };
+      $.ajax({
+        url: "https://zft.topchitu.com/api/taobao",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        data: JSON.stringify(data),
+      })
+        .then(() => {
+          setTimeout(() => {
+            this.onRefresh();
+          }, 1000);
+        })
+        .catch((error) => {
+          const { responseJSON = {} } = error || {};
+          const { subMsg = "" } = responseJSON || {};
+          this.$message.error(subMsg);
+        });
     },
   },
   mounted() {
@@ -320,7 +439,7 @@ export default {
       //   dataType: "json",
       //   data: JSON.stringify(data),
       // });
-    }, 10000);
+    }, 6000);
     this.onInitProxy();
   },
 };
