@@ -278,7 +278,10 @@
         />
         <div slot="footer" class="footer">
           <el-button @click="onCloseFlag">取 消</el-button>
-          <el-button type="primary" @click="onFlagConfirm(dialogFlag.data)"
+          <el-button
+            type="primary"
+            :loading="flagLoading"
+            @click="onFlagConfirm(dialogFlag.data)"
             >确 定</el-button
           >
         </div>
@@ -297,6 +300,7 @@ export default {
       show: true,
       list: [],
       pushType: null,
+      flagLoading: false,
       dialogFlag: {
         visible: false,
         data: {},
@@ -350,7 +354,6 @@ export default {
       this.dialogFlag.data = {};
     },
     onFlagConfirm(dialogFlagData) {
-      console.log(dialogFlagData);
       const { tid = "", sellerMemo = "", sellerFlag = null } =
         dialogFlagData || {};
       const { defaultShopId = null } = this.userInfo || {};
@@ -364,6 +367,7 @@ export default {
         },
         shopId: defaultShopId,
       };
+      this.flagLoading = true;
       $.ajax({
         url: "https://zft.topchitu.com/api/taobao",
         type: "POST",
@@ -373,13 +377,16 @@ export default {
       })
         .then(() => {
           setTimeout(() => {
+            this.flagLoading = false;
             this.onRefresh();
-          }, 1000);
+            this.onCloseFlag();
+          }, 2000);
         })
         .catch((error) => {
           const { responseJSON = {} } = error || {};
           const { subMsg = "" } = responseJSON || {};
           this.$message.error(subMsg);
+          this.flagLoading = false;
         });
     },
   },
