@@ -213,7 +213,12 @@
                         >
                           异常
                         </el-button>
-                        <el-button type="primary" size="mini" v-else>
+                        <el-button
+                          type="primary"
+                          size="mini"
+                          v-else
+                          @click="onPush(item)"
+                        >
                           推送
                         </el-button>
                       </div>
@@ -298,7 +303,10 @@ export default {
   data: function() {
     return {
       show: true,
+      userInfo: {},
       list: [],
+      addresses: [],
+      defAddress: {},
       pushType: null,
       flagLoading: false,
       dialogFlag: {
@@ -331,6 +339,17 @@ export default {
           if (url.indexOf("/user/login-user") > -1) {
             const userInfo = JSON.parse(data) || {};
             this.userInfo = userInfo;
+            console.log(this.userInfo);
+          }
+          if (url.indexOf("/api/taobao") > -1) {
+            const { logistics_address_search_response = {} } =
+              JSON.parse(data) || {};
+            const { addresses = {} } = logistics_address_search_response || {};
+            const { address_result = [] } = addresses || {};
+            if (address_result.length > 0) {
+              this.addresses = address_result;
+              this.defAddress = this.addresses.find((item) => item.get_def);
+            }
           }
           handler.next(response);
         },
@@ -387,6 +406,38 @@ export default {
           const { subMsg = "" } = responseJSON || {};
           this.$message.error(subMsg);
           this.flagLoading = false;
+        });
+    },
+    onPush(listData) {
+      const { defaultShopId = null } = this.userInfo || {};
+      const { contact_id = null } = this.defAddress || {};
+      const data = {
+        logisticsSendList: [
+          {
+            cancelId: contact_id,
+            companyCode: "YUNDA",
+            isSplit: 1,
+            outSid: "4316795704278",
+            senderId: contact_id,
+            tid: listData.trades[0].tid,
+            subTid: listData.trades[0].tid,
+          },
+        ],
+        sendType: "offline",
+        shopId: defaultShopId,
+      };
+      $.ajax({
+        url: "https://zft.topchitu.com/api/taobao/logistics-send",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        data: JSON.stringify(data),
+      })
+        .then((response) => {
+          console.log(response);
+        })
+        .catch((error) => {
+          console.log(error);
         });
     },
   },
