@@ -292,14 +292,19 @@
         </div>
       </div>
     </el-dialog>
+    <dialog-login :visible.sync="dialogLogin.visible" />
   </div>
 </template>
 <script>
 import "./app.less";
-import { proxy, unProxy } from "ajax-hook";
+import dialogLogin from "./components/dialogLogin.vue";
+import { proxy } from "ajax-hook";
 import $ from "jquery";
 
 export default {
+  components: {
+    dialogLogin,
+  },
   data: function() {
     return {
       show: true,
@@ -312,6 +317,9 @@ export default {
       dialogFlag: {
         visible: false,
         data: {},
+      },
+      dialogLogin: {
+        visible: false,
       },
     };
   },
@@ -356,7 +364,8 @@ export default {
       });
     },
     onLoad() {
-      this.show = !this.show;
+      // this.show = !this.show;
+      this.dialogLogin.visible = true;
     },
     onRefresh() {
       $(".ant-btn")
@@ -443,9 +452,23 @@ export default {
   },
   mounted() {
     setTimeout(() => {
-      // $.get("http://8.134.72.1/testCORS.php", (res) => {
-      //   console.log(res);
-      // });
+      // $.ajax({
+      //   url: "http://47.110.83.17:8700/api/auth/login",
+      //   type: "POST",
+      //   contentType: "application/json; charset=utf-8",
+      //   dataType: "json",
+      //   data: JSON.stringify({
+      //     password: "123",
+      //     phone: "123",
+      //     verifyCode: "123",
+      //   }),
+      // })
+      //   .then((response) => {
+      //     console.log(response);
+      //   })
+      //   .catch((error) => {
+      //     console.log(error);
+      //   });
       // $.post(
       //   "http://tc1.woda.com/printSend.do?m=batchSaveOutsid",
       //   {
