@@ -8,7 +8,7 @@
     @open="onOpen"
   >
     <div class="loginBox">
-      <div class="title">开放平台系统</div>
+      <div class="title">登录</div>
       <div class="inputBox">
         <el-input
           class="mgb22"
@@ -55,6 +55,7 @@ export default {
       verifyCode: "",
       imgSrc: "",
       apiSrc: "http://47.110.83.17:8700/api/auth/getVerify",
+      captchaId: "",
     };
   },
   computed: {
@@ -76,6 +77,7 @@ export default {
       this.loginPwd = "";
       this.verifyCode = "";
       this.imgSrc = "";
+      this.captchaId = "";
     },
     onOpen() {
       this.changeImgSrc();
@@ -93,6 +95,7 @@ export default {
           phone: loginName,
           password: loginPwd,
           verifyCode,
+          captchaId: this.captchaId,
         };
         $.ajax({
           url: "//47.110.83.17:8700/api/auth/login",
@@ -102,9 +105,12 @@ export default {
           data: JSON.stringify(data),
         })
           .then((response) => {
-            const { status = null, msg = "" } = response || {};
+            const { status = null, msg = "", data = "" } = response || {};
             if (status == 200) {
-              console.log(res);
+              sessionStorage.setItem("token", data);
+              this.$root.token = data;
+              this.$emit("refresh");
+              this.isVisible = false;
             } else {
               this.changeImgSrc();
               this.$message.error(msg);
@@ -116,7 +122,24 @@ export default {
       }
     },
     changeImgSrc() {
-      this.imgSrc = `${this.apiSrc}?${Date.now()}`;
+      $.ajax({
+        url: "//47.110.83.17:8700/api/auth/getBase64Verify",
+        type: "GET",
+      })
+        .then((response) => {
+          const { status = null, msg = "", data = {} } = response || {};
+          if (status == 200) {
+            const { captcha = "", captchaId = "" } = data || {};
+            this.imgSrc = captcha;
+            this.captchaId = captchaId;
+          } else {
+            this.changeImgSrc();
+            this.$message.error(msg);
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
     },
   },
   mounted() {},

@@ -274,7 +274,7 @@
       :data="dialogModify.data"
       @refresh="onRefresh"
     />
-    <dialog-login :visible.sync="dialogLogin.visible" />
+    <dialog-login :visible.sync="dialogLogin.visible" @refresh="show = true" />
   </div>
 </template>
 <script>
@@ -293,7 +293,7 @@ export default {
   },
   data: function() {
     return {
-      show: true,
+      show: false,
       userInfo: {},
       list: [],
       addresses: [],
@@ -313,6 +313,46 @@ export default {
     };
   },
   methods: {
+    onGetShopInfo() {
+      $.ajax({
+        url: "//47.110.83.17:8700/api/user/my_info",
+        type: "GET",
+        headers: {
+          token: this.$root.token,
+        },
+      })
+        .then((response) => {
+          const { status = null, msg = "", data = "" } = response || {};
+          if (status == 200) {
+            console.log(data);
+          } else {
+            this.$message.error(msg);
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
+    onGetLogistics() {
+      $.ajax({
+        url: "//47.110.83.17:8700/api/common/logistics/all",
+        type: "GET",
+        headers: {
+          token: this.$root.token,
+        },
+      })
+        .then((response) => {
+          const { status = null, msg = "", data = "" } = response || {};
+          if (status == 200) {
+            console.log(data);
+          } else {
+            this.$message.error(msg);
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
     onInitProxy() {
       // ajaxhook钩子，拦截请求数据
       proxy({
@@ -353,8 +393,11 @@ export default {
       });
     },
     onLoad() {
-      // this.show = !this.show;
-      this.dialogLogin.visible = true;
+      if (this.$root.token) {
+        this.show = !this.show;
+      } else {
+        this.dialogLogin.visible = true;
+      }
     },
     onRefresh() {
       $(".ant-btn")
@@ -371,36 +414,44 @@ export default {
       this.dialogModify.data = JSON.parse(JSON.stringify(data));
     },
     onPush(listData) {
-      const { defaultShopId = null } = this.userInfo || {};
-      const { contact_id = null } = this.defAddress || {};
-      const data = {
-        logisticsSendList: [
-          {
-            cancelId: contact_id,
-            companyCode: "YUNDA",
-            isSplit: 1,
-            outSid: "4316951712567",
-            senderId: contact_id,
-            tid: listData.trades[0].tid,
-            subTid: listData.trades[0].tid,
-          },
-        ],
-        sendType: "offline",
-        shopId: defaultShopId,
-      };
-      $.ajax({
-        url: "//zft.topchitu.com/api/taobao/logistics-send",
-        type: "POST",
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        data: JSON.stringify(data),
-      })
-        .then((response) => {
-          console.log(response);
-        })
-        .catch((error) => {
-          console.log(error);
-        });
+      // const { defaultShopId = null } = this.userInfo || {};
+      // const { contact_id = null } = this.defAddress || {};
+      // const data = {
+      //   logisticsSendList: [
+      //     {
+      //       cancelId: contact_id,
+      //       companyCode: "YUNDA",
+      //       isSplit: 1,
+      //       outSid: "4316951712567",
+      //       senderId: contact_id,
+      //       tid: listData.trades[0].tid,
+      //       subTid: listData.trades[0].tid,
+      //     },
+      //   ],
+      //   sendType: "offline",
+      //   shopId: defaultShopId,
+      // };
+      // $.ajax({
+      //   url: "//zft.topchitu.com/api/taobao/logistics-send",
+      //   type: "POST",
+      //   contentType: "application/json; charset=utf-8",
+      //   dataType: "json",
+      //   data: JSON.stringify(data),
+      // })
+      //   .then((response) => {
+      //     console.log(response);
+      //   })
+      //   .catch((error) => {
+      //     console.log(error);
+      //   });
+    },
+  },
+  watch: {
+    show(value) {
+      if (value) {
+        // this.onGetLogistics();
+        // this.onGetShopInfo();
+      }
     },
   },
   mounted() {

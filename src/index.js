@@ -11,4 +11,9 @@ Vue.use(ElementUI);
 const vm = new Vue({
   el: wokooApp,
   render: (h) => h(App),
+  data: function() {
+    return {
+      token: sessionStorage.getItem("token"), // 全局token
+    };
+  },
 });
