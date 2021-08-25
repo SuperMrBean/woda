@@ -94,16 +94,25 @@ export default {
           password: loginPwd,
           verifyCode,
         };
-        console.log(data);
-        // this.$api.login(data, "/api/auth/login").then((res) => {
-        //   if (res.data.status == 200) {
-        //     window.localStorage.setItem("token", res.data.data);
-        //     this.$router.push({ path: "/admin" });
-        //   } else {
-        //     this.changeImgSrc();
-        //     this.$message.error(res.data.msg);
-        //   }
-        // });
+        $.ajax({
+          url: "//47.110.83.17:8700/api/auth/login",
+          type: "POST",
+          contentType: "application/json; charset=utf-8",
+          dataType: "json",
+          data: JSON.stringify(data),
+        })
+          .then((response) => {
+            const { status = null, msg = "" } = response || {};
+            if (status == 200) {
+              console.log(res);
+            } else {
+              this.changeImgSrc();
+              this.$message.error(msg);
+            }
+          })
+          .catch((error) => {
+            console.log(error);
+          });
       }
     },
     changeImgSrc() {

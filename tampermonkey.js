@@ -4,7 +4,7 @@
 // @version      0.0.1
 // @description  try to take over the world!
 // @author
-// @match        *://zft.topchitu.com/print/packs*
+// @match        *://zft.topchitu.com/*
 
 // ==/UserScript==
 

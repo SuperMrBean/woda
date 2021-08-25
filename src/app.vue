@@ -226,7 +226,12 @@
                         style="text-align:center;margin-top:10px;"
                         v-if="tradeIndex === 0"
                       >
-                        <el-button type="text" size="mini">修改订单</el-button>
+                        <el-button
+                          type="text"
+                          size="mini"
+                          @click="onOpenModify(item)"
+                          >修改订单</el-button
+                        >
                       </div>
                       <div class="tipsYellow" v-if="tradeItem.sellerFlag === 2">
                         <div class="attention">
@@ -258,52 +263,33 @@
     <el-button class="loadBtn" @click="onLoad" type="primary">{{
       show ? "关闭推送脚本" : "加载推送脚本"
     }}</el-button>
-    <el-dialog
-      width="600px"
-      title="修改旗帜"
+    <dialog-flag
       :visible.sync="dialogFlag.visible"
-      custom-class="dialogFlag"
-      @close="onCloseFlag"
-    >
-      <div class="flag">
-        <el-radio-group v-model="dialogFlag.data.sellerFlag">
-          <el-radio :label="0"><div class="flagGrey"/></el-radio>
-          <el-radio :label="1"><div class="flagRed"/></el-radio>
-          <el-radio :label="2"><div class="flagYellow"/></el-radio>
-          <el-radio :label="3"><div class="flagGreen"/></el-radio>
-          <el-radio :label="4"><div class="flagBlue"/></el-radio>
-          <el-radio :label="5"><div class="flagPurple"/></el-radio>
-        </el-radio-group>
-        <el-input
-          style="margin-top:20px;"
-          v-model="dialogFlag.data.sellerMemo"
-          type="textarea"
-          placeholder="请输入留言信息"
-          rows="6"
-        />
-        <div slot="footer" class="footer">
-          <el-button @click="onCloseFlag">取 消</el-button>
-          <el-button
-            type="primary"
-            :loading="flagLoading"
-            @click="onFlagConfirm(dialogFlag.data)"
-            >确 定</el-button
-          >
-        </div>
-      </div>
-    </el-dialog>
+      :data="dialogFlag.data"
+      :shopId="userInfo.defaultShopId"
+      @refresh="onRefresh"
+    />
+    <dialog-modify
+      :visible.sync="dialogModify.visible"
+      :data="dialogModify.data"
+      @refresh="onRefresh"
+    />
     <dialog-login :visible.sync="dialogLogin.visible" />
   </div>
 </template>
 <script>
 import "./app.less";
 import dialogLogin from "./components/dialogLogin.vue";
+import dialogFlag from "./components/dialogFlag.vue";
+import dialogModify from "./components/dialogModify.vue";
 import { proxy } from "ajax-hook";
 import $ from "jquery";
 
 export default {
   components: {
     dialogLogin,
+    dialogFlag,
+    dialogModify,
   },
   data: function() {
     return {
@@ -313,13 +299,16 @@ export default {
       addresses: [],
       defAddress: {},
       pushType: null,
-      flagLoading: false,
       dialogFlag: {
         visible: false,
-        data: {},
+        data: null,
       },
       dialogLogin: {
         visible: false,
+      },
+      dialogModify: {
+        visible: false,
+        data: null,
       },
     };
   },
@@ -377,45 +366,9 @@ export default {
       this.dialogFlag.visible = true;
       this.dialogFlag.data = JSON.parse(JSON.stringify(data));
     },
-    onCloseFlag() {
-      this.dialogFlag.visible = false;
-      this.dialogFlag.data = {};
-    },
-    onFlagConfirm(dialogFlagData) {
-      const { tid = "", sellerMemo = "", sellerFlag = null } =
-        dialogFlagData || {};
-      const { defaultShopId = null } = this.userInfo || {};
-      const data = {
-        apiMethodName: "taobao.trade.memo.update",
-        textParams: {
-          tid,
-          memo: sellerMemo,
-          flag: sellerFlag,
-          reset: false,
-        },
-        shopId: defaultShopId,
-      };
-      this.flagLoading = true;
-      $.ajax({
-        url: "https://zft.topchitu.com/api/taobao",
-        type: "POST",
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        data: JSON.stringify(data),
-      })
-        .then(() => {
-          setTimeout(() => {
-            this.flagLoading = false;
-            this.onRefresh();
-            this.onCloseFlag();
-          }, 2000);
-        })
-        .catch((error) => {
-          const { responseJSON = {} } = error || {};
-          const { subMsg = "" } = responseJSON || {};
-          this.$message.error(subMsg);
-          this.flagLoading = false;
-        });
+    onOpenModify(data) {
+      this.dialogModify.visible = true;
+      this.dialogModify.data = JSON.parse(JSON.stringify(data));
     },
     onPush(listData) {
       const { defaultShopId = null } = this.userInfo || {};
@@ -426,7 +379,7 @@ export default {
             cancelId: contact_id,
             companyCode: "YUNDA",
             isSplit: 1,
-            outSid: "4316795704278",
+            outSid: "4316951712567",
             senderId: contact_id,
             tid: listData.trades[0].tid,
             subTid: listData.trades[0].tid,
@@ -436,7 +389,7 @@ export default {
         shopId: defaultShopId,
       };
       $.ajax({
-        url: "https://zft.topchitu.com/api/taobao/logistics-send",
+        url: "//zft.topchitu.com/api/taobao/logistics-send",
         type: "POST",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
