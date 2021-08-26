@@ -91,7 +91,7 @@
         </el-row>
         <el-row :span="24">
           <el-col :span="8">
-            <el-form-item label="省份" required>
+            <el-form-item label="省份" label-width="70px" required>
               <el-select
                 v-model="order.province"
                 filterable
@@ -113,7 +113,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="城市" required>
+            <el-form-item label="城市" label-width="70px" required>
               <el-select
                 v-model="order.city"
                 filterable
@@ -135,7 +135,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="行政区" required>
+            <el-form-item label="行政区" label-width="70px" required>
               <el-select
                 v-model="order.district"
                 filterable
@@ -158,7 +158,7 @@
           </el-col>
         </el-row>
         <el-row :span="24">
-          <el-col :span="8">
+          <el-col :span="10">
             <el-form-item label="街道/乡镇">
               <el-select
                 v-model="order.street"
@@ -180,12 +180,12 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="16">
+          <el-col :span="14">
             <el-form-item label="详细地址" required>
               <el-input
                 placeholder="详细地址"
                 size="mini"
-                style="width: 250px"
+                style="width: 300px"
                 v-model="order.address"
               ></el-input>
             </el-form-item>
