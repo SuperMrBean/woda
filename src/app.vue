@@ -4,20 +4,28 @@
       <div class="header">
         <div class="item">
           <div class="label">当前登录账号：</div>
-          <div class="content">159****4223</div>
+          <div class="content">{{ shopInfo.phone }}</div>
         </div>
         <div class="item">
           <div class="label">绑定店铺：</div>
-          <div class="content">我的小店</div>
+          <div class="content">
+            <span class="type">{{ shopInfo.typeName }}</span>
+            {{ shopInfo.shopName }}
+          </div>
         </div>
         <div class="item">
           <div class="label">可用余额：</div>
-          <div class="content">￥999.99</div>
+          <div class="content">￥{{ balance }}</div>
         </div>
         <div class="item">
           <div class="label">推送后操作：</div>
           <div class="content">
-            <el-select v-model="pushType" placeholder="请选择" size="mini">
+            <el-select
+              v-model="pushType"
+              placeholder="请选择"
+              size="mini"
+              style="width:100px"
+            >
               <el-option label="直接发货" value="send"> </el-option>
               <el-option label="保存运单" value="save"> </el-option>
             </el-select>
@@ -260,9 +268,12 @@
         </div>
       </div>
     </div>
-    <el-button class="loadBtn" @click="onLoad" type="primary">{{
-      show ? "关闭推送脚本" : "加载推送脚本"
+    <el-button v-if="isLogin" class="loadBtn" @click="onOpen" type="primary">{{
+      show ? "关闭推送脚本" : "开启推送脚本"
     }}</el-button>
+    <el-button v-else class="loadBtn" @click="onLogin" type="primary"
+      >登录</el-button
+    >
     <dialog-flag
       :visible.sync="dialogFlag.visible"
       :data="dialogFlag.data"
@@ -274,7 +285,11 @@
       :data="dialogModify.data"
       @refresh="onRefresh"
     />
-    <dialog-login :visible.sync="dialogLogin.visible" @refresh="show = true" />
+    <dialog-login
+      :visible.sync="dialogLogin.visible"
+      :data="dialogLogin.data"
+      @refresh="onUpdateShopInfo"
+    />
   </div>
 </template>
 <script>
@@ -295,16 +310,21 @@ export default {
     return {
       show: false,
       userInfo: {},
+      shopInfo: {},
+      balance: null,
+      logistics: [],
       list: [],
       addresses: [],
       defAddress: {},
       pushType: null,
+      isLogin: false,
       dialogFlag: {
         visible: false,
         data: null,
       },
       dialogLogin: {
         visible: false,
+        data: null,
       },
       dialogModify: {
         visible: false,
@@ -313,48 +333,13 @@ export default {
     };
   },
   methods: {
-    onGetShopInfo() {
-      $.ajax({
-        url: "//47.110.83.17:8700/api/user/my_info",
-        type: "GET",
-        headers: {
-          token: this.$root.token,
-        },
-      })
-        .then((response) => {
-          const { status = null, msg = "", data = "" } = response || {};
-          if (status == 200) {
-            console.log(data);
-          } else {
-            this.$message.error(msg);
-          }
-        })
-        .catch((error) => {
-          console.log(error);
-        });
+    // 初始化接口信息，重新调取所需接口
+    onInit() {
+      this.onGetLogistics();
+      this.onGetBalance();
     },
-    onGetLogistics() {
-      $.ajax({
-        url: "//47.110.83.17:8700/api/common/logistics/all",
-        type: "GET",
-        headers: {
-          token: this.$root.token,
-        },
-      })
-        .then((response) => {
-          const { status = null, msg = "", data = "" } = response || {};
-          if (status == 200) {
-            console.log(data);
-          } else {
-            this.$message.error(msg);
-          }
-        })
-        .catch((error) => {
-          console.log(error);
-        });
-    },
+    // ajaxhook钩子，拦截请求数据
     onInitProxy() {
-      // ajaxhook钩子，拦截请求数据
       proxy({
         //请求发起前进入
         onRequest: (config, handler) => {
@@ -368,16 +353,18 @@ export default {
         onResponse: (response, handler) => {
           const { config = {}, response: data = {} } = response || {};
           const { url = "" } = config || {};
+          // 拦截列表信息
           if (url.indexOf("/trade-pack/find-pack-list") > -1) {
             const { content = [] } = JSON.parse(data) || {};
             this.list = content;
             console.log(this.list);
           }
+          // 拦截用户信息
           if (url.indexOf("/user/login-user") > -1) {
             const userInfo = JSON.parse(data) || {};
             this.userInfo = userInfo;
-            console.log(this.userInfo);
           }
+          // 拦截发货地址列表以及默认发货地址信息
           if (url.indexOf("/api/taobao") > -1) {
             const { logistics_address_search_response = {} } =
               JSON.parse(data) || {};
@@ -392,18 +379,110 @@ export default {
         },
       });
     },
-    onLoad() {
-      if (this.$root.token) {
-        this.show = !this.show;
+    // 请求店铺信息并做店铺名字校验
+    onGetShopInfo(token) {
+      $.ajax({
+        url: "//47.110.83.17:8700/api/user/my_info",
+        type: "GET",
+        headers: {
+          token,
+        },
+      })
+        .then((response) => {
+          const { status = null, msg = "", data = "" } = response || {};
+          if (status == 200) {
+            this.onCheckName(this.userInfo, data, token);
+          } else {
+            this.$message.error(msg);
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
+    // 获取商家余额
+    onGetBalance() {
+      $.ajax({
+        url: "//47.110.83.17:8700/api/user/my_account",
+        type: "GET",
+        headers: {
+          token: this.$root.token,
+        },
+      })
+        .then((response) => {
+          const { status = null, msg = "", data = "" } = response || {};
+          if (status == 200) {
+            const { amount = null } = data || {};
+            this.balance = amount;
+          } else {
+            this.$message.error(msg);
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
+    // 请求快递列表
+    onGetLogistics() {
+      $.ajax({
+        url: "//47.110.83.17:8700/api/common/logistics/all",
+        type: "GET",
+        headers: {
+          token: this.$root.token,
+        },
+      })
+        .then((response) => {
+          const { status = null, msg = "", data = [] } = response || {};
+          if (status == 200) {
+            this.logistics = data;
+          } else {
+            this.$message.error(msg);
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
+    // 检测店铺名称是否相同
+    onCheckName(userInfo, shopInfo, token) {
+      const { defaultShopName = "" } = userInfo;
+      const { nickName = "" } = shopInfo;
+      if (defaultShopName === nickName) {
+        sessionStorage.setItem("token", token);
+        this.$root.token = token;
+        this.shopInfo = shopInfo;
+        this.isLogin = true;
       } else {
-        this.dialogLogin.visible = true;
+        this.$message.error("店铺信息不符");
+        sessionStorage.removeItem("token");
+        this.$root.token = "";
+        this.shopInfo = {};
+        this.isLogin = false;
       }
     },
+    onLogin() {
+      if (!this.userInfo) {
+        this.$message.warning("用户数据加载中，请稍后");
+        return;
+      }
+      this.dialogLogin.visible = true;
+      this.dialogLogin.data = this.userInfo;
+    },
+    onOpen() {
+      this.show = !this.show;
+    },
+    // 模拟点击搜索按钮，达到刷新列表效果
     onRefresh() {
       $(".ant-btn")
         .find("span:contains('搜索')")
         .parent()[0]
         .click();
+    },
+    // 登录成功后更新店铺信息，并请求快递列表
+    onUpdateShopInfo(data) {
+      this.shopInfo = data;
+      this.isLogin = true;
+      this.show = true;
     },
     onOpenFlag(data) {
       this.dialogFlag.visible = true;
@@ -447,84 +526,90 @@ export default {
     },
   },
   watch: {
+    userInfo(pre, cur) {
+      if (JSON.stringify(pre) !== JSON.stringify(cur)) {
+        if (this.$root.token) {
+          this.onGetShopInfo(this.$root.token);
+        }
+      }
+    },
     show(value) {
       if (value) {
-        // this.onGetLogistics();
-        // this.onGetShopInfo();
+        this.onInit();
       }
     },
   },
   mounted() {
-    setTimeout(() => {
-      // $.ajax({
-      //   url: "http://47.110.83.17:8700/api/auth/login",
-      //   type: "POST",
-      //   contentType: "application/json; charset=utf-8",
-      //   dataType: "json",
-      //   data: JSON.stringify({
-      //     password: "123",
-      //     phone: "123",
-      //     verifyCode: "123",
-      //   }),
-      // })
-      //   .then((response) => {
-      //     console.log(response);
-      //   })
-      //   .catch((error) => {
-      //     console.log(error);
-      //   });
-      // $.post(
-      //   "http://tc1.woda.com/printSend.do?m=batchSaveOutsid",
-      //   {
-      //     expressId: "50",
-      //     tableType: "0",
-      //     keyTidCtids: JSON.stringify({
-      //       "1345442199065381079": ["1345442199065381079"],
-      //     }),
-      //     expressTemplateId: "934771",
-      //     expressTemplateName: "韵达手动填单号",
-      //     expressTemplateKind: "0",
-      //     keyTidOutsid: JSON.stringify({
-      //       "1345442199065381079": "4315697655846",
-      //     }),
-      //     tidSelectedOids: JSON.stringify({
-      //       "1345442199065381079": [
-      //         "1345442199066381079",
-      //         "1345442199067381079",
-      //       ],
-      //     }),
-      //   },
-      //   (res) => {
-      //     let originData = list.find((item) => item.keyTid === id);
-      //     const { data = {} } = JSON.parse(res) || {};
-      //     Object.assign(originData, { ...data[id] });
-      //     ids.shift();
-      //     getItemData(ids);
-      //   }
-      // );
-      // const data = {
-      //   encryptedAddressList: [
-      //     {
-      //       objectId: "0",
-      //       tidList: ["1375708800108342399"],
-      //       receiverName: "陆**",
-      //       receiverMobile: "*******2559",
-      //       receiverAddress: "兰*街道**小区*区**号楼",
-      //       oaid:
-      //         "1fIsMXCesa3podkGKmoaG551FoRlPHBwzojw57icDxxf6D1Rr369f7H98aj0ezpfNpYg6Q7m",
-      //     },
-      //   ],
-      //   decryptAuthType: "SHOP",
-      //   targetId: 1820,
-      // };
-      // $.ajax({
-      //   url: "https://zft.topchitu.com/api/security/batch-decrypt-address",
-      //   type: "POST",
-      //   contentType: "application/json; charset=utf-8",
-      //   dataType: "json",
-      //   data: JSON.stringify(data),
-      // });
-    }, 6000);
+    // setTimeout(() => {
+    // $.ajax({
+    //   url: "http://47.110.83.17:8700/api/auth/login",
+    //   type: "POST",
+    //   contentType: "application/json; charset=utf-8",
+    //   dataType: "json",
+    //   data: JSON.stringify({
+    //     password: "123",
+    //     phone: "123",
+    //     verifyCode: "123",
+    //   }),
+    // })
+    //   .then((response) => {
+    //     console.log(response);
+    //   })
+    //   .catch((error) => {
+    //     console.log(error);
+    //   });
+    // $.post(
+    //   "http://tc1.woda.com/printSend.do?m=batchSaveOutsid",
+    //   {
+    //     expressId: "50",
+    //     tableType: "0",
+    //     keyTidCtids: JSON.stringify({
+    //       "1345442199065381079": ["1345442199065381079"],
+    //     }),
+    //     expressTemplateId: "934771",
+    //     expressTemplateName: "韵达手动填单号",
+    //     expressTemplateKind: "0",
+    //     keyTidOutsid: JSON.stringify({
+    //       "1345442199065381079": "4315697655846",
+    //     }),
+    //     tidSelectedOids: JSON.stringify({
+    //       "1345442199065381079": [
+    //         "1345442199066381079",
+    //         "1345442199067381079",
+    //       ],
+    //     }),
+    //   },
+    //   (res) => {
+    //     let originData = list.find((item) => item.keyTid === id);
+    //     const { data = {} } = JSON.parse(res) || {};
+    //     Object.assign(originData, { ...data[id] });
+    //     ids.shift();
+    //     getItemData(ids);
+    //   }
+    // );
+    // const data = {
+    //   encryptedAddressList: [
+    //     {
+    //       objectId: "0",
+    //       tidList: ["1375708800108342399"],
+    //       receiverName: "陆**",
+    //       receiverMobile: "*******2559",
+    //       receiverAddress: "兰*街道**小区*区**号楼",
+    //       oaid:
+    //         "1fIsMXCesa3podkGKmoaG551FoRlPHBwzojw57icDxxf6D1Rr369f7H98aj0ezpfNpYg6Q7m",
+    //     },
+    //   ],
+    //   decryptAuthType: "SHOP",
+    //   targetId: 1820,
+    // };
+    // $.ajax({
+    //   url: "https://zft.topchitu.com/api/security/batch-decrypt-address",
+    //   type: "POST",
+    //   contentType: "application/json; charset=utf-8",
+    //   dataType: "json",
+    //   data: JSON.stringify(data),
+    // });
+    // }, 6000);
     this.onInitProxy();
   },
 };

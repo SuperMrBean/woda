@@ -34,6 +34,7 @@
           style="width:100%;"
           @click="onSubmit"
           @keyup.enter.native="onSubmit"
+          :loading="loading"
           >登录</el-button
         >
       </div>
@@ -47,6 +48,9 @@ export default {
       type: Boolean,
       required: true,
     },
+    data: {
+      type: Object,
+    },
   },
   data: function() {
     return {
@@ -56,6 +60,7 @@ export default {
       imgSrc: "",
       apiSrc: "http://47.110.83.17:8700/api/auth/getVerify",
       captchaId: "",
+      loading: false,
     };
   },
   computed: {
@@ -71,6 +76,47 @@ export default {
     },
   },
   methods: {
+    onGetShopInfo(token) {
+      $.ajax({
+        url: "//47.110.83.17:8700/api/user/my_info",
+        type: "GET",
+        headers: {
+          token,
+        },
+      })
+        .then((response) => {
+          const { status = null, msg = "", data = "" } = response || {};
+          if (status == 200) {
+            this.onCheckName(this.data, data, token);
+          } else {
+            sessionStorage.removeItem("token");
+            this.$root.token = "";
+            this.$message.error(msg);
+            this.changeImgSrc();
+          }
+          this.loading = false;
+        })
+        .catch((error) => {
+          this.loading = false;
+          console.log(error);
+        });
+    },
+    // 检测店铺名称是否相同
+    onCheckName(userInfo, shopInfo, token) {
+      const { defaultShopName = "" } = userInfo;
+      const { nickName = "" } = shopInfo;
+      if (defaultShopName === nickName) {
+        sessionStorage.setItem("token", token);
+        this.$root.token = token;
+        this.$emit("refresh", shopInfo);
+        this.isVisible = false;
+      } else {
+        this.$message.error("店铺信息不符");
+        sessionStorage.removeItem("token");
+        this.$root.token = "";
+        this.changeImgSrc();
+      }
+    },
     onClose() {
       this.isVisible = false;
       this.loginName = "";
@@ -91,6 +137,7 @@ export default {
       } else if (verifyCode == "") {
         this.$message.error("验证码不可为空");
       } else {
+        this.loading = true;
         let data = {
           phone: loginName,
           password: loginPwd,
@@ -107,16 +154,15 @@ export default {
           .then((response) => {
             const { status = null, msg = "", data = "" } = response || {};
             if (status == 200) {
-              sessionStorage.setItem("token", data);
-              this.$root.token = data;
-              this.$emit("refresh");
-              this.isVisible = false;
+              this.onGetShopInfo(data);
             } else {
+              this.loading = false;
               this.changeImgSrc();
               this.$message.error(msg);
             }
           })
           .catch((error) => {
+            this.loading = false;
             console.log(error);
           });
       }
