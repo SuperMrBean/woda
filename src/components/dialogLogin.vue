@@ -106,6 +106,7 @@ export default {
       const { defaultShopName = "" } = userInfo;
       const { nickName = "" } = shopInfo;
       if (defaultShopName === nickName) {
+        this.$message.success("登录成功");
         sessionStorage.setItem("token", token);
         this.$root.token = token;
         this.$emit("refresh", shopInfo);

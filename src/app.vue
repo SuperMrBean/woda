@@ -493,6 +493,44 @@ export default {
       this.dialogModify.data = JSON.parse(JSON.stringify(data));
     },
     onPush(listData) {
+      console.log(listData);
+      const { trades = [] } = listData || {};
+      if (trades.length === 0) {
+        return;
+      }
+      const { tid = "", buyerNick = "", oaid = "" } = trades[0] || {};
+      console.log(tid);
+      const data = {
+        list: {
+          orderId: tid,
+          cpCode: "",
+          buyerNickname: buyerNick,
+          buyerUid: oaid,
+          receiver: "",
+          phoneNumber: "",
+          province: "",
+          city: "",
+          district: "",
+          street: "",
+          address: "",
+          fullAddress: "",
+          flag: "",
+          interceptReason: "",
+          orderTime: "",
+          innerOrder: "",
+          isUrgent: "",
+          orderSkuList: [
+            {
+              skuCode: "k_ix-10012",
+              skuNum: 1,
+            },
+            {
+              skuCode: "k_ix-10013",
+              skuNum: "3",
+            },
+          ],
+        },
+      };
       // const { defaultShopId = null } = this.userInfo || {};
       // const { contact_id = null } = this.defAddress || {};
       // const data = {
