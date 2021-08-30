@@ -299,6 +299,7 @@ import dialogFlag from "./components/dialogFlag.vue";
 import dialogModify from "./components/dialogModify.vue";
 import { proxy } from "ajax-hook";
 import $ from "jquery";
+import qs from "qs";
 
 export default {
   components: {
@@ -539,37 +540,37 @@ export default {
         });
       });
       const data = {
-        list: {
-          orderId: tid,
-          cpCode,
-          buyerNickname: buyerNick,
-          buyerUid: oaid,
-          receiver: name,
-          phoneNumber: mobile,
-          province: receiverState,
-          city: receiverCity,
-          district: receiverDistrict,
-          street: receiverTown,
-          address,
-          fullAddress: `${receiverState}${receiverCity}${receiverDistrict}${receiverTown}${address}`,
-          flag: 4,
-          interceptReason: "",
-          orderTime: null,
-          innerOrder: false,
-          isUrgent: 1,
-          orderSkuList: skuList,
-        },
+        list: [
+          {
+            orderId: tid,
+            cpCode,
+            buyerNickname: buyerNick,
+            buyerUid: oaid,
+            receiver: name,
+            phoneNumber: mobile,
+            province: receiverState,
+            city: receiverCity,
+            district: receiverDistrict,
+            street: receiverTown,
+            address,
+            fullAddress: `${receiverState}${receiverCity}${receiverDistrict}${receiverTown}${address}`,
+            flag: 4,
+            interceptReason: "",
+            orderTime: null,
+            innerOrder: false,
+            isUrgent: 1,
+            orderSkuList: skuList,
+          },
+        ],
       };
       $.ajax({
         url: "//47.110.83.17:8700/api/order/json",
         type: "POST",
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
         headers: {
           token: this.$root.token,
           appid: this.shopInfo.appId,
         },
-        data: JSON.stringify({ orderJson: data }),
+        data: { orderJson: JSON.stringify(data) },
       })
         .then((response) => {
           const { status = null, msg = "" } = response;
