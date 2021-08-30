@@ -460,6 +460,129 @@ export default {
         this.isLogin = false;
       }
     },
+    // 获取明文信息
+    onGetItemDetail(listData) {
+      const { defaultShopId = null } = this.userInfo || {};
+      const { trades = [], receiverInfo = {} } = listData || {};
+      const tidList = trades.map((item) => item.tid);
+      const {
+        receiverName = "",
+        receiverAddress = "",
+        receiverMobile = "",
+        oaid = "",
+      } = receiverInfo || {};
+      const data = {
+        encryptedAddressList: [
+          {
+            objectId: "0",
+            tidList: tidList,
+            receiverName,
+            receiverMobile,
+            receiverAddress,
+            oaid,
+          },
+        ],
+        decryptAuthType: "SHOP",
+        targetId: defaultShopId,
+      };
+      $.ajax({
+        url: "//zft.topchitu.com/api/security/batch-decrypt-address",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        data: JSON.stringify(data),
+      })
+        .then((response) => {
+          const {
+            receiverName = "",
+            receiverMobile = "",
+            receiverAddress = "",
+          } = response[0];
+          if (receiverName && receiverMobile && receiverAddress) {
+            this.onPushOrderJson(
+              receiverName,
+              receiverMobile,
+              receiverAddress,
+              listData
+            );
+          } else {
+            this.$message.error("获取明文信息失败");
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
+    onPushOrderJson(name, mobile, address, listData) {
+      const { trades = [] } = listData || {};
+      if (trades.length === 0) {
+        this.$message.error("推送信息有误");
+        return;
+      }
+      const { cpCode = "" } = this.logistics[0];
+      const { tid = "", buyerNick = "", oaid = "" } = trades[0] || {};
+      const { receiverInfo = {} } = listData || {};
+      const {
+        receiverCity = "",
+        receiverState = "",
+        receiverDistrict = "",
+        receiverTown = "",
+      } = receiverInfo || {};
+      let skuList = [];
+      trades.forEach((trade) => {
+        const { orders = [] } = trade || {};
+        orders.forEach((order) => {
+          skuList.push({
+            skuCode: order.outerSkuId ? order.outerSkuId : order.outerIid,
+            skuNum: order.num,
+          });
+        });
+      });
+      const data = {
+        list: {
+          orderId: tid,
+          cpCode,
+          buyerNickname: buyerNick,
+          buyerUid: oaid,
+          receiver: name,
+          phoneNumber: mobile,
+          province: receiverState,
+          city: receiverCity,
+          district: receiverDistrict,
+          street: receiverTown,
+          address,
+          fullAddress: `${receiverState}${receiverCity}${receiverDistrict}${receiverTown}${address}`,
+          flag: 4,
+          interceptReason: "",
+          orderTime: null,
+          innerOrder: false,
+          isUrgent: 1,
+          orderSkuList: skuList,
+        },
+      };
+      $.ajax({
+        url: "//47.110.83.17:8700/api/order/json",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        headers: {
+          token: this.$root.token,
+          appid: this.shopInfo.appId,
+        },
+        data: JSON.stringify({ orderJson: data }),
+      })
+        .then((response) => {
+          const { status = null, msg = "" } = response;
+          if (status === 200) {
+            console.log(123);
+          } else {
+            this.$message.error(`推送失败：${msg}`);
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
     onLogin() {
       if (!this.userInfo) {
         this.$message.warning("用户数据加载中，请稍后");
@@ -493,74 +616,7 @@ export default {
       this.dialogModify.data = JSON.parse(JSON.stringify(data));
     },
     onPush(listData) {
-      console.log(listData);
-      const { trades = [] } = listData || {};
-      if (trades.length === 0) {
-        return;
-      }
-      const { tid = "", buyerNick = "", oaid = "" } = trades[0] || {};
-      console.log(tid);
-      const data = {
-        list: {
-          orderId: tid,
-          cpCode: "",
-          buyerNickname: buyerNick,
-          buyerUid: oaid,
-          receiver: "",
-          phoneNumber: "",
-          province: "",
-          city: "",
-          district: "",
-          street: "",
-          address: "",
-          fullAddress: "",
-          flag: "",
-          interceptReason: "",
-          orderTime: "",
-          innerOrder: "",
-          isUrgent: "",
-          orderSkuList: [
-            {
-              skuCode: "k_ix-10012",
-              skuNum: 1,
-            },
-            {
-              skuCode: "k_ix-10013",
-              skuNum: "3",
-            },
-          ],
-        },
-      };
-      // const { defaultShopId = null } = this.userInfo || {};
-      // const { contact_id = null } = this.defAddress || {};
-      // const data = {
-      //   logisticsSendList: [
-      //     {
-      //       cancelId: contact_id,
-      //       companyCode: "YUNDA",
-      //       isSplit: 1,
-      //       outSid: "4316951712567",
-      //       senderId: contact_id,
-      //       tid: listData.trades[0].tid,
-      //       subTid: listData.trades[0].tid,
-      //     },
-      //   ],
-      //   sendType: "offline",
-      //   shopId: defaultShopId,
-      // };
-      // $.ajax({
-      //   url: "//zft.topchitu.com/api/taobao/logistics-send",
-      //   type: "POST",
-      //   contentType: "application/json; charset=utf-8",
-      //   dataType: "json",
-      //   data: JSON.stringify(data),
-      // })
-      //   .then((response) => {
-      //     console.log(response);
-      //   })
-      //   .catch((error) => {
-      //     console.log(error);
-      //   });
+      this.onGetItemDetail(listData);
     },
   },
   watch: {
