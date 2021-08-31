@@ -304,12 +304,83 @@ export default {
     },
   },
   methods: {
+    // 获取明文信息
+    onGetItemDetail(listData) {
+      const { defaultShopId = null } = this.userInfo || {};
+      const { trades = [], receiverInfo = {} } = listData || {};
+      const tidList = trades.map((item) => item.tid);
+      const {
+        receiverName = "",
+        receiverAddress = "",
+        receiverMobile = "",
+        oaid = "",
+      } = receiverInfo || {};
+      const data = {
+        encryptedAddressList: [
+          {
+            objectId: "0",
+            tidList: tidList,
+            receiverName,
+            receiverMobile,
+            receiverAddress,
+            oaid,
+          },
+        ],
+        decryptAuthType: "SHOP",
+        targetId: defaultShopId,
+      };
+      $.ajax({
+        url: "//zft.topchitu.com/api/security/batch-decrypt-address",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        data: JSON.stringify(data),
+      })
+        .then((response) => {
+          const {
+            receiverName = "",
+            receiverMobile = "",
+            receiverAddress = "",
+          } = response[0];
+          if (receiverName && receiverMobile && receiverAddress) {
+            this.order.phoneNumber = receiverMobile;
+            this.order.receiver = receiverName;
+            this.order.address = receiverAddress;
+          } else {
+            this.$message.error("获取明文信息失败");
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
+    onGetProvinceList() {
+      $.ajax({
+        url: "//47.110.83.17:8700/api/common/province/all",
+        type: "GET",
+        headers: {
+          token: this.$root.token,
+        },
+      })
+        .then((response) => {
+          console.log(response);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
     onClose() {
       this.isVisible = false;
       this.loading = false;
     },
     onOpen() {
-      console.log(this.data);
+      this.onGetItemDetail(this.data);
+      const _data = JSON.parse(JSON.stringify(this.data));
+      console.log(_data);
+      const { trades = [] } = _data || {};
+      const { tid = "" } = trades[0];
+      this.order.orderNo = tid;
+      // this.onGetProvinceList();
     },
     onConfirm() {
       console.log("confirm");
