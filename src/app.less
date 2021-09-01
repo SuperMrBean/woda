@@ -46,7 +46,6 @@
       overflow: auto;
       .line {
         margin-top: 30px;
-        padding-bottom: 20px;
         width: 100%;
         border-bottom: 1px solid #eee;
         .statusBar {
@@ -163,6 +162,7 @@
           background: rgba(101, 84, 192, 0.1);
         }
         .trades {
+          padding-bottom: 20px;
           .subOrderId {
             display: flex;
             justify-content: space-between;
@@ -337,11 +337,32 @@
             }
           }
         }
+        .success {
+          background: #009900;
+        }
         .message {
           background: #339900;
           color: #fff;
           padding: 10px 0;
           text-align: center;
+        }
+        .orderError {
+          margin-top: 4px;
+          border-top: 1px solid #797979;
+          border-bottom: 1px solid #797979;
+          padding: 6px 0;
+          color: #fff;
+          text-align: center;
+          background: #cc0000;
+        }
+        .skuError {
+          margin-top: 4px;
+          border-top: 1px solid #797979;
+          border-bottom: 1px solid #797979;
+          padding: 6px 0;
+          color: #fff;
+          text-align: center;
+          background: #cc0000;
         }
       }
     }

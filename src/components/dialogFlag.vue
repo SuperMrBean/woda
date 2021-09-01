@@ -99,11 +99,10 @@ export default {
         data: JSON.stringify(data),
       })
         .then(() => {
-          setTimeout(() => {
-            this.loading = false;
-            this.$emit("refresh");
-            this.isVisible = false;
-          }, 2000);
+          this.loading = false;
+          this.data.sellerFlag = this.sellerFlag;
+          this.data.sellerMemo = this.sellerMemo;
+          this.isVisible = false;
         })
         .catch((error) => {
           const { responseJSON = {} } = error || {};

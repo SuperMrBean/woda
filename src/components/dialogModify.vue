@@ -262,11 +262,18 @@ export default {
       type: Object || null,
       require: true,
     },
+    userInfo: {
+      type: Object || null,
+      require: true,
+    },
+    logistics: {
+      type: Array || null,
+      require: true,
+    },
   },
   data: function() {
     return {
       loading: false,
-      logistics: [],
       province: [],
       cityList: [],
       districtList: [],
@@ -306,6 +313,7 @@ export default {
   methods: {
     // 获取明文信息
     onGetItemDetail(listData) {
+      console.log(this.userInfo);
       const { defaultShopId = null } = this.userInfo || {};
       const { trades = [], receiverInfo = {} } = listData || {};
       const tidList = trades.map((item) => item.tid);
@@ -376,10 +384,10 @@ export default {
     onOpen() {
       this.onGetItemDetail(this.data);
       const _data = JSON.parse(JSON.stringify(this.data));
-      console.log(_data);
-      const { trades = [] } = _data || {};
+      const { trades = [], buyerNick = "" } = _data || {};
       const { tid = "" } = trades[0];
       this.order.orderNo = tid;
+      this.order.buyerNickname = buyerNick;
       // this.onGetProvinceList();
     },
     onConfirm() {

@@ -111,7 +111,7 @@
               </div>
             </div>
             <div
-              class="trades"
+              v-bind:class="{ trades: true, success: item.isPush }"
               v-for="(tradeItem, tradeIndex) in item.trades"
               :key="tradeIndex"
             >
@@ -224,6 +224,7 @@
                         <el-button
                           type="primary"
                           size="mini"
+                          :loading="pushLoading"
                           v-else
                           @click="onPush(item)"
                         >
@@ -264,6 +265,14 @@
                 </el-row>
               </div>
             </div>
+            <div
+              class="orderError"
+              v-for="(error, index) in item.orderErrorList"
+              :key="index"
+            >
+              {{ error.errorText }}
+            </div>
+            <div class="skuError" v-if="item.isSkuError">sku错误</div>
           </div>
         </div>
       </div>
@@ -278,11 +287,12 @@
       :visible.sync="dialogFlag.visible"
       :data="dialogFlag.data"
       :shopId="userInfo.defaultShopId"
-      @refresh="onRefresh"
     />
     <dialog-modify
       :visible.sync="dialogModify.visible"
       :data="dialogModify.data"
+      :userInfo="userInfo"
+      :logistics="logistics"
       @refresh="onRefresh"
     />
     <dialog-login
@@ -299,7 +309,6 @@ import dialogFlag from "./components/dialogFlag.vue";
 import dialogModify from "./components/dialogModify.vue";
 import { proxy } from "ajax-hook";
 import $ from "jquery";
-import qs from "qs";
 
 export default {
   components: {
@@ -319,6 +328,7 @@ export default {
       defAddress: {},
       pushType: null,
       isLogin: false,
+      pushLoading: false,
       dialogFlag: {
         visible: false,
         data: null,
@@ -357,7 +367,14 @@ export default {
           // 拦截列表信息
           if (url.indexOf("/trade-pack/find-pack-list") > -1) {
             const { content = [] } = JSON.parse(data) || {};
-            this.list = content;
+            this.list = content.map((item) => {
+              return {
+                ...item,
+                isSkuError: false,
+                isPush: false,
+                orderErrorList: [],
+              };
+            });
             console.log(this.list);
           }
           // 拦截用户信息
@@ -504,19 +521,21 @@ export default {
         data: JSON.stringify(totalSku),
       })
         .then((response) => {
-          const { status = null, msg = "" } = response;
+          const { status = null, msg = "", data: skuList = [] } = response;
           if (status === 200) {
-            response;
+            this.onGetItemDetail(listData, skuList);
           } else {
             this.$message.error(`sku列表解析失败：${msg}`);
+            this.pushLoading = false;
           }
         })
         .catch((error) => {
+          this.pushLoading = false;
           console.log(error);
         });
     },
     // 获取明文信息
-    onGetItemDetail(listData) {
+    onGetItemDetail(listData, skuList) {
       const { defaultShopId = null } = this.userInfo || {};
       const { trades = [], receiverInfo = {} } = listData || {};
       const tidList = trades.map((item) => item.tid);
@@ -558,18 +577,22 @@ export default {
               receiverName,
               receiverMobile,
               receiverAddress,
-              listData
+              listData,
+              skuList
             );
           } else {
+            this.pushLoading = false;
             this.$message.error("获取明文信息失败");
           }
         })
         .catch((error) => {
+          this.pushLoading = false;
           console.log(error);
         });
     },
-    onPushOrderJson(name, mobile, address, listData) {
-      const { trades = [] } = listData || {};
+    // 推送
+    onPushOrderJson(name, mobile, address, listData, skuList) {
+      const { trades = [], minPayTime = "" } = listData || {};
       if (trades.length === 0) {
         this.$message.error("推送信息有误");
         return;
@@ -583,23 +606,13 @@ export default {
         receiverDistrict = "",
         receiverTown = "",
       } = receiverInfo || {};
-      let skuList = [];
-      trades.forEach((trade) => {
-        const { orders = [] } = trade || {};
-        orders.forEach((order) => {
-          skuList.push({
-            skuCode: order.outerSkuId ? order.outerSkuId : order.outerIid,
-            skuNum: order.num,
-          });
-        });
-      });
       const data = {
         list: [
           {
             orderId: tid,
             cpCode,
             buyerNickname: buyerNick,
-            buyerUid: oaid,
+            buyerUid: oaid.substr(0, 10),
             receiver: name,
             phoneNumber: mobile,
             province: receiverState,
@@ -612,7 +625,7 @@ export default {
             interceptReason: "",
             orderTime: null,
             innerOrder: false,
-            isUrgent: 1,
+            isUrgent: 0,
             orderSkuList: skuList,
           },
         ],
@@ -627,14 +640,79 @@ export default {
         data: { orderJson: JSON.stringify(data) },
       })
         .then((response) => {
-          const { status = null, msg = "" } = response;
+          const { status = null, msg = "", data = {} } = response || {};
+          const { error = [], ok = [], balance = null } = data || {};
           if (status === 200) {
-            console.log(123);
+            if (error.length > 0) {
+              const { orderError = [], skuError = [] } = error[0];
+              if (orderError.length > 0) {
+                listData.orderErrorList = orderError;
+              }
+              if (skuError.length > 0) {
+                listData.isSkuError = true;
+              }
+              this.pushLoading = false;
+              this.$message.error("推送失败");
+            } else {
+              listData.isSkuError = false;
+              listData.orderErrorList = [];
+              this.balance = balance;
+              const { logisticsNumber = "" } = ok[0];
+              if (this.pushType === "send") {
+                this.onDelivery(listData, logisticsNumber);
+              } else {
+                alert(`保存单号：${logisticsNumber}`);
+              }
+            }
           } else {
+            this.pushLoading = false;
             this.$message.error(`推送失败：${msg}`);
           }
         })
         .catch((error) => {
+          this.pushLoading = false;
+          console.log(error);
+        });
+    },
+    // 发货
+    onDelivery(listData, logisticsNumber) {
+      const { defaultShopId = null } = this.userInfo || {};
+      const { contact_id = null } = this.defAddress || {};
+      const { cpCode = "" } = this.logistics[0] || {};
+      const data = {
+        logisticsSendList: [
+          {
+            cancelId: contact_id,
+            companyCode: cpCode,
+            isSplit: 1,
+            outSid: logisticsNumber,
+            senderId: contact_id,
+            tid: listData.trades[0].tid,
+            subTid: listData.trades[0].tid,
+          },
+        ],
+        sendType: "offline",
+        shopId: defaultShopId,
+      };
+      $.ajax({
+        url: "//zft.topchitu.com/api/taobao/logistics-send",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        data: JSON.stringify(data),
+      })
+        .then((response) => {
+          const { success = null, msg = "" } = response[0] || {};
+          if (success) {
+            this.$message.success("推送成功");
+            listData.isPush = true;
+          } else {
+            this.$message.error(`发货失败：${msg}`);
+          }
+          this.pushLoading = false;
+        })
+        .catch((error) => {
+          this.pushLoading = false;
           console.log(error);
         });
     },
@@ -664,14 +742,23 @@ export default {
     },
     onOpenFlag(data) {
       this.dialogFlag.visible = true;
-      this.dialogFlag.data = JSON.parse(JSON.stringify(data));
+      this.dialogFlag.data = data;
     },
     onOpenModify(data) {
+      if (!this.pushType) {
+        this.$message.error("请选择推送后操作");
+        return;
+      }
       this.dialogModify.visible = true;
       this.dialogModify.data = JSON.parse(JSON.stringify(data));
     },
+    // 点击推送，开始一些列推送请求
     onPush(listData) {
-      // this.onGetItemDetail(listData);
+      if (!this.pushType) {
+        this.$message.error("请选择推送后操作");
+        return;
+      }
+      this.pushLoading = true;
       this.onGetSkuList(listData);
     },
   },
