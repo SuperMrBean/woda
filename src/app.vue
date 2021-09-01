@@ -623,7 +623,7 @@ export default {
             fullAddress: `${receiverState}${receiverCity}${receiverDistrict}${receiverTown}${address}`,
             flag: 4,
             interceptReason: "",
-            orderTime: null,
+            orderTime: minPayTime,
             innerOrder: false,
             isUrgent: 0,
             orderSkuList: skuList,

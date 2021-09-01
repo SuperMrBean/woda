@@ -107,7 +107,7 @@
                   v-for="item in province"
                   :key="item.text"
                   :label="item.text"
-                  :value="item.value"
+                  :value="item.text"
                 ></el-option>
               </el-select>
             </el-form-item>
@@ -129,7 +129,7 @@
                   v-for="item in cityList"
                   :key="item.text"
                   :label="item.text"
-                  :value="item.value"
+                  :value="item.text"
                 ></el-option>
               </el-select>
             </el-form-item>
@@ -151,7 +151,7 @@
                   v-for="item in districtList"
                   :key="item.text"
                   :label="item.text"
-                  :value="item.value"
+                  :value="item.text"
                 ></el-option>
               </el-select>
             </el-form-item>
@@ -175,7 +175,7 @@
                   v-for="item in streetList"
                   :key="item.text"
                   :label="item.text"
-                  :value="item.value"
+                  :value="item.text"
                 ></el-option>
               </el-select>
             </el-form-item>
@@ -220,7 +220,7 @@
         <el-table-column prop="skuNum" label="数量">
           <template slot-scope="scope">
             <el-input
-              v-model="scope.row.count"
+              v-model="scope.row.skuNum"
               size="mini"
               placeholder="数量"
             ></el-input>
@@ -228,7 +228,7 @@
         </el-table-column>
         <el-table-column label="信息">
           <template slot-scope="scope">
-            <span class="order-error">{{ scope.row.errorText }}</span>
+            <span class="order-error">{{ scope.row.errorInfo }}</span>
           </template>
         </el-table-column>
         <el-table-column label="操作">
@@ -243,12 +243,40 @@
         </el-table-column>
       </el-table>
     </div>
-    <div slot="footer" class="footer">
-      <el-button @click="onClose">取 消</el-button>
-      <el-button type="primary" :loading="loading" @click="onConfirm"
-        >确 定</el-button
+    <div class="footer">
+      <div class="error system-error" v-if="systemError">{{ systemError }}</div>
+      <div
+        class="error order-error"
+        v-for="(orderError, index) in error.orderError"
+        :key="index"
       >
+        {{ orderError.errorText }}
+      </div>
+      <div class="footer-btn">
+        <el-button size="mini" type="primary" @click="onAddOrder"
+          >添加子订单</el-button
+        >
+        <el-button size="mini" type="success" @click="onAddSkus"
+          >快速添加</el-button
+        >
+        <el-button
+          size="mini"
+          type="primary"
+          @click="onPostOrder"
+          :loading="loading"
+          >推送</el-button
+        >
+      </div>
     </div>
+    <el-dialog title="快速添加" :visible.sync="isMore" append-to-body>
+      <el-input type="textarea" :rows="12" v-model="moreRemarks"></el-input>
+      <div slot="footer" class="dialog-footer">
+        <el-button size="mini" @click="onMoreCencel">取 消</el-button>
+        <el-button size="mini" type="primary" @click="onMoreSubmit"
+          >确 定</el-button
+        >
+      </div>
+    </el-dialog>
   </el-dialog>
 </template>
 <script>
@@ -296,6 +324,15 @@ export default {
       orderSkuList: [],
       detailAddress: "",
       checked: false,
+      systemError: "",
+      errorStatus: false,
+      error: {
+        orderId: null,
+        orderError: [],
+        skuError: [],
+      },
+      isMore: false,
+      moreRemarks: "",
     };
   },
   computed: {
@@ -362,36 +399,147 @@ export default {
           console.log(error);
         });
     },
+    // 获取省市区数据
     onGetProvinceList() {
       $.ajax({
-        url: "//47.110.83.17:8700/api/common/province/all",
+        url: "//47.110.83.17:8700/api/common/cascadingStreets",
         type: "GET",
         headers: {
           token: this.$root.token,
         },
       })
         .then((response) => {
-          console.log(response);
+          const { data = [] } = response || {};
+          this.province = data;
+          let citys = this.province.filter((item) => {
+            return item.text == this.order.province;
+          });
+          this.cityList = citys[0].children;
+          let districts = this.cityList.filter((item) => {
+            return item.text == this.order.city;
+          });
+          this.districtList = districts[0].children;
+          let streets = this.districtList.filter((item) => {
+            return item.text == this.order.district;
+          });
+          this.streetList = streets[0].children;
         })
         .catch((error) => {
           console.log(error);
         });
     },
+    // 获取skuList
+    onGetSkuList(listData) {
+      const { trades = [] } = listData || {};
+      let totalOrders = [];
+      trades.forEach((trade) => {
+        const { orders = [] } = trade || {};
+        orders.forEach((order) => {
+          totalOrders.push(order);
+        });
+      });
+      let totalSku = [];
+      totalOrders.forEach((order) => {
+        const { outerSkuId = "", outerIid = "", num = null } = order || {};
+        const sku = outerSkuId || outerIid || null;
+        if (sku) {
+          if (/\+/g.test(sku)) {
+            let outerSkuIdArr = sku.split("+").map((item) => {
+              return {
+                skuCode: item,
+                skuNum: num,
+              };
+            });
+            outerSkuIdArr.forEach((item) => {
+              totalSku.push(item);
+            });
+          } else {
+            totalSku.push({ skuCode: sku, skuNum: num });
+          }
+        } else {
+          totalSku.push({ skuCode: "", skuNum: num });
+        }
+      });
+      $.ajax({
+        url: "//47.110.83.17:8700/api/product/parsePushSkuList",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        headers: {
+          token: this.$root.token,
+        },
+        data: JSON.stringify(totalSku),
+      })
+        .then((response) => {
+          const { status = null, msg = "", data: skuList = [] } = response;
+          if (status === 200) {
+            this.orderSkuList = skuList;
+          } else {
+            this.$message.error(`sku列表解析失败：${msg}`);
+            this.pushLoading = false;
+          }
+        })
+        .catch((error) => {
+          this.pushLoading = false;
+          console.log(error);
+        });
+    },
+    onPostOrder() {},
     onClose() {
       this.isVisible = false;
       this.loading = false;
+      this.order = {
+        orderNo: "",
+        cpCode: "",
+        buyerNickname: "",
+        buyerUid: "",
+        receiver: "",
+        phoneNumber: "",
+        province: "",
+        city: "",
+        district: "",
+        street: "",
+        address: "",
+        fullAddress: "",
+        orderTime: "",
+      };
+      this.orderSkuList = [];
+      this.detailAddress = "";
+      this.checked = false;
+      this.systemError = "";
+      this.errorStatus = false;
+      this.error = {
+        orderId: null,
+        orderError: [],
+        skuError: [],
+      };
+      this.isMore = false;
+      this.moreRemarks = "";
+      this.province = [];
+      this.cityList = [];
+      this.districtList = [];
+      this.streetList = [];
     },
     onOpen() {
+      this.onGetProvinceList();
       this.onGetItemDetail(this.data);
+      this.onGetSkuList(this.data);
       const _data = JSON.parse(JSON.stringify(this.data));
-      const { trades = [], buyerNick = "" } = _data || {};
-      const { tid = "" } = trades[0];
+      const { trades = [], receiverInfo = {}, buyerNick = "" } = _data || {};
+      const { tid = "", oaid = "" } = trades[0];
+      const {
+        receiverState = "",
+        receiverCity = "",
+        receiverDistrict = "",
+        receiverTown = "",
+      } = receiverInfo || {};
       this.order.orderNo = tid;
       this.order.buyerNickname = buyerNick;
-      // this.onGetProvinceList();
-    },
-    onConfirm() {
-      console.log("confirm");
+      this.order.province = receiverState;
+      this.order.city = receiverCity;
+      this.order.district = receiverDistrict;
+      this.order.street = receiverTown;
+      this.order.buyerUid = oaid.substr(0, 10);
     },
     onChangeAddress() {
       if (!this.detailAddress) return;
@@ -433,7 +581,7 @@ export default {
     onChangeValue(val, key) {
       if (key === "province") {
         let citys = this.province.filter((item) => {
-          return item.value == val;
+          return item.text == val;
         });
         this.cityList = citys[0].children;
         this.districtList = [];
@@ -444,7 +592,7 @@ export default {
       }
       if (key === "city") {
         let districts = this.cityList.filter((item) => {
-          return item.value == val;
+          return item.text == val;
         });
         this.districtList = districts[0].children;
         this.streetList = [];
@@ -453,11 +601,59 @@ export default {
       }
       if (key === "district") {
         let streets = this.districtList.filter((item) => {
-          return item.value == val;
+          return item.text == val;
         });
         this.streetList = streets[0].children;
         this.order.street = "";
       }
+    },
+    onAddOrder() {
+      this.orderSkuList.push({
+        skuCode: null,
+        count: 1,
+      });
+    },
+    onAddSkus() {
+      this.$confirm("是否需要清空默认数据？", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(() => {
+          this.orderSkuList = [];
+          this.isMore = true;
+        })
+        .catch(() => {
+          this.isMore = true;
+        });
+    },
+    onMoreCencel() {
+      this.moreRemarks = "";
+      this.isMore = false;
+    },
+    onMoreSubmit() {
+      if (this.moreRemarks == "") {
+        this.$message.error("信息为空");
+        return;
+      }
+      let text = this.moreRemarks;
+      let regList = /(?<=\【)[^\【\】]+(?=\】)/g;
+      let list = text.match(regList);
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] == "" || list[i] == null || typeof list[i] == undefined) {
+          list.splice(i, 1);
+          i = i - 1;
+        }
+      }
+      list.map((item) => {
+        let data = {
+          skuCode: item,
+          count: 1,
+        };
+        this.orderSkuList.push(data);
+      });
+      this.moreRemarks = "";
+      this.isMore = false;
     },
   },
   mounted() {},
@@ -480,11 +676,33 @@ export default {
         font-size: 18px;
       }
     }
+    .order-error {
+      color: #f56c6c;
+    }
+    .footer-btn {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .order-error {
+      color: red;
+    }
+    .error {
+      width: 100%;
+      height: 50px;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #dcdfe6;
+      margin-bottom: 10px;
+      margin-top: 10px;
+    }
   }
   .footer {
     margin-top: 20px;
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
   }
 }
 </style>
