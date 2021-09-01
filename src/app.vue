@@ -461,6 +461,60 @@ export default {
         this.isLogin = false;
       }
     },
+    // 获取skuList
+    onGetSkuList(listData) {
+      const { trades = [] } = listData || {};
+      let totalOrders = [];
+      trades.forEach((trade) => {
+        const { orders = [] } = trade || {};
+        orders.forEach((order) => {
+          totalOrders.push(order);
+        });
+      });
+      let totalSku = [];
+      totalOrders.forEach((order) => {
+        const { outerSkuId = "", outerIid = "", num = null } = order || {};
+        const sku = outerSkuId || outerIid || null;
+        if (sku) {
+          if (/\+/g.test(sku)) {
+            let outerSkuIdArr = sku.split("+").map((item) => {
+              return {
+                skuCode: item,
+                skuNum: num,
+              };
+            });
+            outerSkuIdArr.forEach((item) => {
+              totalSku.push(item);
+            });
+          } else {
+            totalSku.push({ skuCode: sku, skuNum: num });
+          }
+        } else {
+          totalSku.push({ skuCode: "", skuNum: num });
+        }
+      });
+      $.ajax({
+        url: "//47.110.83.17:8700/api/product/parsePushSkuList",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        headers: {
+          token: this.$root.token,
+        },
+        data: JSON.stringify(totalSku),
+      })
+        .then((response) => {
+          const { status = null, msg = "" } = response;
+          if (status === 200) {
+            response;
+          } else {
+            this.$message.error(`sku列表解析失败：${msg}`);
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
     // 获取明文信息
     onGetItemDetail(listData) {
       const { defaultShopId = null } = this.userInfo || {};
@@ -617,7 +671,8 @@ export default {
       this.dialogModify.data = JSON.parse(JSON.stringify(data));
     },
     onPush(listData) {
-      this.onGetItemDetail(listData);
+      // this.onGetItemDetail(listData);
+      this.onGetSkuList(listData);
     },
   },
   watch: {

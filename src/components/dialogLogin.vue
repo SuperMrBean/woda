@@ -125,6 +125,7 @@ export default {
       this.verifyCode = "";
       this.imgSrc = "";
       this.captchaId = "";
+      this.loading = false;
     },
     onOpen() {
       this.changeImgSrc();
