@@ -224,6 +224,14 @@
                         <el-button
                           type="primary"
                           size="mini"
+                          v-else-if="item.isPush"
+                          style="background:#fff;border-color:#fff;color:#3e3e3e"
+                        >
+                          推送成功
+                        </el-button>
+                        <el-button
+                          type="primary"
+                          size="mini"
                           :loading="pushLoading"
                           v-else
                           @click="onPush(item)"
@@ -233,7 +241,7 @@
                       </div>
                       <div
                         style="text-align:center;margin-top:10px;"
-                        v-if="tradeIndex === 0"
+                        v-if="tradeIndex === 0 && !item.isPush"
                       >
                         <el-button
                           type="text"
@@ -292,8 +300,10 @@
       :visible.sync="dialogModify.visible"
       :data="dialogModify.data"
       :userInfo="userInfo"
+      :shopInfo="shopInfo"
       :logistics="logistics"
-      @refresh="onRefresh"
+      :pushType="pushType"
+      :defAddress="defAddress"
     />
     <dialog-login
       :visible.sync="dialogLogin.visible"
@@ -623,7 +633,7 @@ export default {
             fullAddress: `${receiverState}${receiverCity}${receiverDistrict}${receiverTown}${address}`,
             flag: 4,
             interceptReason: "",
-            orderTime: minPayTime,
+            orderTime: null,
             innerOrder: false,
             isUrgent: 0,
             orderSkuList: skuList,
@@ -659,7 +669,7 @@ export default {
               this.balance = balance;
               const { logisticsNumber = "" } = ok[0];
               if (this.pushType === "send") {
-                this.onDelivery(listData, logisticsNumber);
+                this.onDelivery({ listData, logisticsNumber });
               } else {
                 alert(`保存单号：${logisticsNumber}`);
               }
@@ -675,22 +685,25 @@ export default {
         });
     },
     // 发货
-    onDelivery(listData, logisticsNumber) {
+    onDelivery({ listData, logisticsNumber }) {
       const { defaultShopId = null } = this.userInfo || {};
       const { contact_id = null } = this.defAddress || {};
       const { cpCode = "" } = this.logistics[0] || {};
+      const { trades = [] } = listData || {};
+      const logisticsSendList = trades.map((trade) => {
+        const { tid = "", orders = [] } = trade || {};
+        return {
+          cancelId: contact_id,
+          companyCode: cpCode,
+          isSplit: 1,
+          outSid: logisticsNumber,
+          senderId: contact_id,
+          tid,
+          subTid: orders.map((order) => order.oid).join(","),
+        };
+      });
       const data = {
-        logisticsSendList: [
-          {
-            cancelId: contact_id,
-            companyCode: cpCode,
-            isSplit: 1,
-            outSid: logisticsNumber,
-            senderId: contact_id,
-            tid: listData.trades[0].tid,
-            subTid: listData.trades[0].tid,
-          },
-        ],
+        logisticsSendList,
         sendType: "offline",
         shopId: defaultShopId,
       };
@@ -702,12 +715,11 @@ export default {
         data: JSON.stringify(data),
       })
         .then((response) => {
-          const { success = null, msg = "" } = response[0] || {};
-          if (success) {
+          if (response.every((item) => item.success)) {
             this.$message.success("推送成功");
             listData.isPush = true;
           } else {
-            this.$message.error(`发货失败：${msg}`);
+            this.$message.error(`发货失败`);
           }
           this.pushLoading = false;
         })

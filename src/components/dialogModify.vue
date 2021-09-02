@@ -28,7 +28,6 @@
                 v-model="order.cpCode"
                 placeholder="快递公司"
                 size="mini"
-                disabled
               >
                 <el-option
                   v-for="item in logistics"
@@ -214,6 +213,7 @@
               v-model="scope.row.skuCode"
               size="mini"
               placeholder="商家编码"
+              @blur="onCheckSkuList"
             ></el-input>
           </template>
         </el-table-column>
@@ -259,11 +259,7 @@
         <el-button size="mini" type="success" @click="onAddSkus"
           >快速添加</el-button
         >
-        <el-button
-          size="mini"
-          type="primary"
-          @click="onPostOrder"
-          :loading="loading"
+        <el-button size="mini" type="primary" @click="onPush" :loading="loading"
           >推送</el-button
         >
       </div>
@@ -294,8 +290,20 @@ export default {
       type: Object || null,
       require: true,
     },
+    shopInfo: {
+      type: Object || null,
+      require: true,
+    },
     logistics: {
       type: Array || null,
+      require: true,
+    },
+    pushType: {
+      type: String,
+      require: true,
+    },
+    defAddress: {
+      type: Object || null,
       require: true,
     },
   },
@@ -350,7 +358,6 @@ export default {
   methods: {
     // 获取明文信息
     onGetItemDetail(listData) {
-      console.log(this.userInfo);
       const { defaultShopId = null } = this.userInfo || {};
       const { trades = [], receiverInfo = {} } = listData || {};
       const tidList = trades.map((item) => item.tid);
@@ -484,7 +491,146 @@ export default {
           console.log(error);
         });
     },
-    onPostOrder() {},
+    // 检查skuList
+    onCheckSkuList() {
+      $.ajax({
+        url: "//47.110.83.17:8700/api/product/parsePushSkuList",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        headers: {
+          token: this.$root.token,
+        },
+        data: JSON.stringify(
+          this.orderSkuList.map((item) => {
+            return { skuCode: item.skuCode, skuNum: item.skuNum };
+          })
+        ),
+      })
+        .then((response) => {
+          const { status = null, msg = "", data: skuList = [] } = response;
+          if (status === 200) {
+            this.orderSkuList = skuList;
+          } else {
+            this.$message.error(`sku列表解析失败：${msg}`);
+            this.pushLoading = false;
+          }
+        })
+        .catch((error) => {
+          this.pushLoading = false;
+          console.log(error);
+        });
+    },
+    // 推送到开放平台
+    onPushOrderJson(listData) {
+      const data = {
+        list: [
+          {
+            orderId: this.order.orderId,
+            cpCode: this.order.cpCode,
+            buyerNickname: this.order.buyerNickname,
+            buyerUid: this.order.buyerUid,
+            receiver: this.order.receiver,
+            phoneNumber: this.order.phoneNumber,
+            province: this.order.province,
+            city: this.order.city,
+            district: this.order.district,
+            street: this.order.street,
+            address: this.order.address,
+            fullAddress: `${this.order.province}${this.order.city}${this.order.district}${this.order.street}${this.order.address}`,
+            flag: 4,
+            interceptReason: "",
+            orderTime: this.order.orderTime,
+            innerOrder: false,
+            isUrgent: this.checked ? 1 : 0,
+            orderSkuList: this.orderSkuList,
+          },
+        ],
+      };
+      $.ajax({
+        url: "//47.110.83.17:8700/api/order/json",
+        type: "POST",
+        headers: {
+          token: this.$root.token,
+          appid: this.shopInfo.appId,
+        },
+        data: { orderJson: JSON.stringify(data) },
+      })
+        .then((response) => {
+          const { status = null, msg = "", data = {} } = response || {};
+          const { error = [], ok = [], balance = null } = data || {};
+          if (status === 200) {
+            if (error.length > 0) {
+              const { orderError = [] } = error[0];
+              if (orderError.length > 0) {
+                this.error = orderError;
+              }
+              this.loading = false;
+              this.$message.error("推送失败");
+            } else {
+              this.error = [];
+              this.balance = balance;
+              const { logisticsNumber = "" } = ok[0];
+              if (this.pushType === "send") {
+                this.onDelivery(listData, logisticsNumber);
+              } else {
+                alert(`保存单号：${logisticsNumber}`);
+              }
+            }
+          } else {
+            this.pushLoading = false;
+            this.$message.error(`推送失败：${msg}`);
+          }
+        })
+        .catch((error) => {
+          this.pushLoading = false;
+          console.log(error);
+        });
+    },
+    // 发货
+    onDelivery({ listData, logisticsNumber }) {
+      const { defaultShopId = null } = this.userInfo || {};
+      const { contact_id = null } = this.defAddress || {};
+      const { cpCode = "" } = this.logistics[0] || {};
+      const { trades = [] } = listData || {};
+      const logisticsSendList = trades.map((trade) => {
+        const { tid = "", orders = [] } = trade || {};
+        return {
+          cancelId: contact_id,
+          companyCode: cpCode,
+          isSplit: 1,
+          outSid: logisticsNumber,
+          senderId: contact_id,
+          tid,
+          subTid: orders.map((order) => order.oid).join(","),
+        };
+      });
+      const data = {
+        logisticsSendList,
+        sendType: "offline",
+        shopId: defaultShopId,
+      };
+      $.ajax({
+        url: "//zft.topchitu.com/api/taobao/logistics-send",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        data: JSON.stringify(data),
+      })
+        .then((response) => {
+          if (response.every((item) => item.success)) {
+            this.$message.success("推送成功");
+            listData.isPush = true;
+          } else {
+            this.$message.error(`发货失败`);
+          }
+          this.pushLoading = false;
+        })
+        .catch((error) => {
+          this.pushLoading = false;
+          console.log(error);
+        });
+    },
     onClose() {
       this.isVisible = false;
       this.loading = false;
@@ -525,7 +671,12 @@ export default {
       this.onGetItemDetail(this.data);
       this.onGetSkuList(this.data);
       const _data = JSON.parse(JSON.stringify(this.data));
-      const { trades = [], receiverInfo = {}, buyerNick = "" } = _data || {};
+      const {
+        trades = [],
+        receiverInfo = {},
+        buyerNick = "",
+        minPayTime = "",
+      } = _data || {};
       const { tid = "", oaid = "" } = trades[0];
       const {
         receiverState = "",
@@ -540,6 +691,11 @@ export default {
       this.order.district = receiverDistrict;
       this.order.street = receiverTown;
       this.order.buyerUid = oaid.substr(0, 10);
+      this.order.orderTime = minPayTime;
+      this.order.cpCode = this.logistics[0].cpCode;
+    },
+    onPush() {
+      this.$emit("send", { listData: this.data, logisticsNumber: "123456" });
     },
     onChangeAddress() {
       if (!this.detailAddress) return;
@@ -610,7 +766,7 @@ export default {
     onAddOrder() {
       this.orderSkuList.push({
         skuCode: null,
-        count: 1,
+        skuNum: 1,
       });
     },
     onAddSkus() {
@@ -645,13 +801,22 @@ export default {
           i = i - 1;
         }
       }
-      list.map((item) => {
-        let data = {
-          skuCode: item,
-          count: 1,
-        };
-        this.orderSkuList.push(data);
-      });
+      let oldList = JSON.parse(JSON.stringify(this.orderSkuList));
+      // 去重
+      list = list.reduce((acc, cur) => {
+        const index = acc.findIndex((item) => item.skuCode === cur);
+        if (index > -1) {
+          acc[index].skuNum += 1;
+        } else {
+          acc.push({
+            skuCode: cur,
+            skuNum: 1,
+          });
+        }
+        return acc;
+      }, oldList);
+      this.orderSkuList = list;
+      this.onCheckSkuList();
       this.moreRemarks = "";
       this.isMore = false;
     },
