@@ -228,7 +228,7 @@
         </el-table-column>
         <el-table-column label="信息">
           <template slot-scope="scope">
-            <span class="order-error">{{ scope.row.errorInfo }}</span>
+            <span class="sku-error">{{ scope.row.errorInfo }}</span>
           </template>
         </el-table-column>
         <el-table-column label="操作">
@@ -563,7 +563,7 @@ export default {
             if (error.length > 0) {
               const { orderError = [] } = error[0];
               if (orderError.length > 0) {
-                this.error = orderError;
+                this.error.orderError = orderError;
               }
               this.loading = false;
               this.$message.error("推送失败");
@@ -572,19 +572,18 @@ export default {
               this.balance = balance;
               const { logisticsNumber = "" } = ok[0];
               if (this.pushType === "send") {
-                this.onDelivery(listData, logisticsNumber);
+                this.onDelivery({ listData, logisticsNumber });
               } else {
                 alert(`保存单号：${logisticsNumber}`);
               }
             }
           } else {
-            this.pushLoading = false;
+            this.loading = false;
             this.$message.error(`推送失败：${msg}`);
           }
         })
         .catch((error) => {
-          this.pushLoading = false;
-          console.log(error);
+          this.loading = false;
         });
     },
     // 发货
@@ -620,14 +619,15 @@ export default {
         .then((response) => {
           if (response.every((item) => item.success)) {
             this.$message.success("推送成功");
+            this.isVisible = false;
             listData.isPush = true;
           } else {
             this.$message.error(`发货失败`);
           }
-          this.pushLoading = false;
+          this.loading = false;
         })
         .catch((error) => {
-          this.pushLoading = false;
+          this.loading = false;
           console.log(error);
         });
     },
@@ -684,7 +684,7 @@ export default {
         receiverDistrict = "",
         receiverTown = "",
       } = receiverInfo || {};
-      this.order.orderNo = tid;
+      this.order.orderId = tid;
       this.order.buyerNickname = buyerNick;
       this.order.province = receiverState;
       this.order.city = receiverCity;
@@ -695,7 +695,8 @@ export default {
       this.order.cpCode = this.logistics[0].cpCode;
     },
     onPush() {
-      this.$emit("send", { listData: this.data, logisticsNumber: "123456" });
+      this.loading = true;
+      this.onPushOrderJson(this.data);
     },
     onChangeAddress() {
       if (!this.detailAddress) return;
@@ -841,18 +842,18 @@ export default {
         font-size: 18px;
       }
     }
-    .order-error {
-      color: #f56c6c;
+    .sku-error {
+      color: red;
     }
+  }
+  .footer {
     .footer-btn {
       display: flex;
       justify-content: center;
       margin-top: 20px;
     }
-    .order-error {
-      color: red;
-    }
     .error {
+      color: red;
       width: 100%;
       height: 50px;
       font-size: 20px;
@@ -863,11 +864,6 @@ export default {
       margin-bottom: 10px;
       margin-top: 10px;
     }
-  }
-  .footer {
-    margin-top: 20px;
-    display: flex;
-    justify-content: center;
   }
 }
 </style>

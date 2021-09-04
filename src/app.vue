@@ -246,7 +246,7 @@
                         <el-button
                           type="text"
                           size="mini"
-                          @click="onOpenModify(item)"
+                          @click="onOpenModify(item, index)"
                           >修改订单</el-button
                         >
                       </div>
@@ -304,6 +304,7 @@
       :logistics="logistics"
       :pushType="pushType"
       :defAddress="defAddress"
+      @refresh="onChangeSuccess"
     />
     <dialog-login
       :visible.sync="dialogLogin.visible"
@@ -756,13 +757,14 @@ export default {
       this.dialogFlag.visible = true;
       this.dialogFlag.data = data;
     },
-    onOpenModify(data) {
+    onOpenModify(data, index) {
       if (!this.pushType) {
         this.$message.error("请选择推送后操作");
         return;
       }
       this.dialogModify.visible = true;
       this.dialogModify.data = JSON.parse(JSON.stringify(data));
+      this.dialogModify.index = index;
     },
     // 点击推送，开始一些列推送请求
     onPush(listData) {
@@ -772,6 +774,10 @@ export default {
       }
       this.pushLoading = true;
       this.onGetSkuList(listData);
+    },
+    // 修改订单推送成功后修改背景颜色
+    onChangeSuccess() {
+      this.list[this.dialogModify.index].isPush = true;
     },
   },
   watch: {
