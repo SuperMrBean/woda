@@ -17,7 +17,6 @@
                 size="mini"
                 v-model="order.orderNo"
                 style="width:200px"
-                disabled
               ></el-input>
             </el-form-item>
           </el-col>
@@ -47,7 +46,6 @@
                 size="mini"
                 v-model="order.buyerNickname"
                 style="width:200px"
-                disabled
               ></el-input>
             </el-form-item>
           </el-col>
@@ -58,7 +56,6 @@
                 size="mini"
                 v-model="order.buyerUid"
                 style="width:200px"
-                disabled
               ></el-input>
             </el-form-item>
           </el-col>
@@ -67,7 +64,7 @@
         <div class="title">
           <div class="text">收件信息</div>
           <el-checkbox
-            v-model="isUrgent"
+            v-model="checked"
             v-if="shopInfo && shopInfo.permissionUrgentOrder"
             >加急订单</el-checkbox
           >
@@ -286,10 +283,6 @@ export default {
       type: Boolean,
       required: true,
     },
-    data: {
-      type: Object || null,
-      require: true,
-    },
     userInfo: {
       type: Object || null,
       require: true,
@@ -300,14 +293,6 @@ export default {
     },
     logistics: {
       type: Array || null,
-      require: true,
-    },
-    pushType: {
-      type: String,
-      require: true,
-    },
-    defAddress: {
-      type: Object || null,
       require: true,
     },
   },
@@ -335,7 +320,7 @@ export default {
       },
       orderSkuList: [],
       detailAddress: "",
-      isUrgent: false,
+      checked: false,
       systemError: "",
       errorStatus: false,
       error: {
@@ -360,56 +345,6 @@ export default {
     },
   },
   methods: {
-    // 获取明文信息
-    onGetItemDetail(listData) {
-      const { defaultShopId = null } = this.userInfo || {};
-      const { trades = [], receiverInfo = {} } = listData || {};
-      const tidList = trades.map((item) => item.tid);
-      const {
-        receiverName = "",
-        receiverAddress = "",
-        receiverMobile = "",
-        oaid = "",
-      } = receiverInfo || {};
-      const data = {
-        encryptedAddressList: [
-          {
-            objectId: "0",
-            tidList: tidList,
-            receiverName,
-            receiverMobile,
-            receiverAddress,
-            oaid,
-          },
-        ],
-        decryptAuthType: "SHOP",
-        targetId: defaultShopId,
-      };
-      $.ajax({
-        url: "//zft.topchitu.com/api/security/batch-decrypt-address",
-        type: "POST",
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        data: JSON.stringify(data),
-      })
-        .then((response) => {
-          const {
-            receiverName = "",
-            receiverMobile = "",
-            receiverAddress = "",
-          } = response[0];
-          if (receiverName && receiverMobile && receiverAddress) {
-            this.order.phoneNumber = receiverMobile;
-            this.order.receiver = receiverName;
-            this.order.address = receiverAddress;
-          } else {
-            this.$message.error("获取明文信息失败");
-          }
-        })
-        .catch((error) => {
-          console.log(error);
-        });
-    },
     // 获取省市区数据
     onGetProvinceList() {
       $.ajax({
@@ -422,18 +357,18 @@ export default {
         .then((response) => {
           const { data = [] } = response || {};
           this.province = data;
-          let citys = this.province.filter((item) => {
-            return item.text == this.order.province;
-          });
-          this.cityList = citys[0].children;
-          let districts = this.cityList.filter((item) => {
-            return item.text == this.order.city;
-          });
-          this.districtList = districts[0].children;
-          let streets = this.districtList.filter((item) => {
-            return item.text == this.order.district;
-          });
-          this.streetList = streets[0].children;
+          // let citys = this.province.filter((item) => {
+          //   return item.text == this.order.province;
+          // });
+          // this.cityList = citys[0].children;
+          // let districts = this.cityList.filter((item) => {
+          //   return item.text == this.order.city;
+          // });
+          // this.districtList = districts[0].children;
+          // let streets = this.districtList.filter((item) => {
+          //   return item.text == this.order.district;
+          // });
+          // this.streetList = streets[0].children;
         })
         .catch((error) => {
           console.log(error);
@@ -546,7 +481,7 @@ export default {
             interceptReason: "",
             orderTime: this.order.orderTime,
             innerOrder: false,
-            isUrgent: this.isUrgent ? 1 : 0,
+            isUrgent: this.checked ? 1 : 0,
             orderSkuList: this.orderSkuList,
           },
         ],
@@ -575,11 +510,9 @@ export default {
               this.error = [];
               this.balance = balance;
               const { logisticsNumber = "" } = ok[0];
-              if (this.pushType === "send") {
-                this.onDelivery({ listData, logisticsNumber });
-              } else {
-                alert(`保存单号：${logisticsNumber}`);
-              }
+              this.$message.success("推送成功");
+              this.isVisible = false;
+              this.loading = false;
             }
           } else {
             this.loading = false;
@@ -588,51 +521,6 @@ export default {
         })
         .catch((error) => {
           this.loading = false;
-        });
-    },
-    // 发货
-    onDelivery({ listData, logisticsNumber }) {
-      const { defaultShopId = null } = this.userInfo || {};
-      const { contact_id = null } = this.defAddress || {};
-      const { cpCode = "" } = this.logistics[0] || {};
-      const { trades = [] } = listData || {};
-      const logisticsSendList = trades.map((trade) => {
-        const { tid = "", orders = [] } = trade || {};
-        return {
-          cancelId: contact_id,
-          companyCode: cpCode,
-          isSplit: 1,
-          outSid: logisticsNumber,
-          senderId: contact_id,
-          tid,
-          subTid: orders.map((order) => order.oid).join(","),
-        };
-      });
-      const data = {
-        logisticsSendList,
-        sendType: "offline",
-        shopId: defaultShopId,
-      };
-      $.ajax({
-        url: "//zft.topchitu.com/api/taobao/logistics-send",
-        type: "POST",
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        data: JSON.stringify(data),
-      })
-        .then((response) => {
-          if (response.every((item) => item.success)) {
-            this.$message.success("推送成功");
-            this.isVisible = false;
-            listData.isPush = true;
-          } else {
-            this.$message.error(`发货失败`);
-          }
-          this.loading = false;
-        })
-        .catch((error) => {
-          this.loading = false;
-          console.log(error);
         });
     },
     onClose() {
@@ -655,7 +543,7 @@ export default {
       };
       this.orderSkuList = [];
       this.detailAddress = "";
-      this.isUrgent = false;
+      this.checked = false;
       this.systemError = "";
       this.errorStatus = false;
       this.error = {
@@ -671,32 +559,7 @@ export default {
       this.streetList = [];
     },
     onOpen() {
-      console.log(this.shopInfo);
       this.onGetProvinceList();
-      this.onGetItemDetail(this.data);
-      this.onGetSkuList(this.data);
-      const _data = JSON.parse(JSON.stringify(this.data));
-      const {
-        trades = [],
-        receiverInfo = {},
-        buyerNick = "",
-        minPayTime = "",
-      } = _data || {};
-      const { tid = "", oaid = "" } = trades[0];
-      const {
-        receiverState = "",
-        receiverCity = "",
-        receiverDistrict = "",
-        receiverTown = "",
-      } = receiverInfo || {};
-      this.order.orderId = tid;
-      this.order.buyerNickname = buyerNick;
-      this.order.province = receiverState;
-      this.order.city = receiverCity;
-      this.order.district = receiverDistrict;
-      this.order.street = receiverTown;
-      this.order.buyerUid = oaid.substr(0, 10);
-      this.order.orderTime = minPayTime;
       this.order.cpCode = this.logistics[0].cpCode;
     },
     onPush() {

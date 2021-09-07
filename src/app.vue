@@ -35,7 +35,9 @@
           >查看回调记录</el-button
         >
         <el-button size="mini" type="primary">历史订单查询</el-button>
-        <el-button size="mini" type="primary">添加自由订单</el-button>
+        <el-button size="mini" type="primary" @click="onOpenFree"
+          >添加自由订单</el-button
+        >
       </div>
       <div class="table">
         <div class="head">
@@ -304,7 +306,12 @@
       :logistics="logistics"
       :pushType="pushType"
       :defAddress="defAddress"
-      @refresh="onChangeSuccess"
+    />
+    <dialog-free
+      :visible.sync="dialogFree.visible"
+      :userInfo="userInfo"
+      :shopInfo="shopInfo"
+      :logistics="logistics"
     />
     <dialog-login
       :visible.sync="dialogLogin.visible"
@@ -318,6 +325,7 @@ import "./app.less";
 import dialogLogin from "./components/dialogLogin.vue";
 import dialogFlag from "./components/dialogFlag.vue";
 import dialogModify from "./components/dialogModify.vue";
+import dialogFree from "./components/dialogFree.vue";
 import { proxy } from "ajax-hook";
 import $ from "jquery";
 
@@ -326,6 +334,7 @@ export default {
     dialogLogin,
     dialogFlag,
     dialogModify,
+    dialogFree,
   },
   data: function() {
     return {
@@ -351,6 +360,9 @@ export default {
       dialogModify: {
         visible: false,
         data: null,
+      },
+      dialogFree: {
+        visible: false,
       },
     };
   },
@@ -766,6 +778,9 @@ export default {
       this.dialogModify.data = JSON.parse(JSON.stringify(data));
       this.dialogModify.index = index;
     },
+    onOpenFree() {
+      this.dialogFree.visible = true;
+    },
     // 点击推送，开始一些列推送请求
     onPush(listData) {
       if (!this.pushType) {
@@ -774,10 +789,6 @@ export default {
       }
       this.pushLoading = true;
       this.onGetSkuList(listData);
-    },
-    // 修改订单推送成功后修改背景颜色
-    onChangeSuccess() {
-      this.list[this.dialogModify.index].isPush = true;
     },
   },
   watch: {
