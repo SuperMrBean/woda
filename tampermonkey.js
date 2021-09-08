@@ -13,5 +13,6 @@
   if (location.href === "http://localhost:8080/") return;
   var script = document.createElement("script");
   script.src = "http://localhost:8080/app.bundle.js";
+  // script.src = "http://8.134.72.1/pushPlugin/app.bundle.js";
   document.body.appendChild(script);
 })();
