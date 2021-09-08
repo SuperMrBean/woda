@@ -306,12 +306,14 @@
       :logistics="logistics"
       :pushType="pushType"
       :defAddress="defAddress"
+      @refresh="onChangeBalance"
     />
     <dialog-free
       :visible.sync="dialogFree.visible"
       :userInfo="userInfo"
       :shopInfo="shopInfo"
       :logistics="logistics"
+      @refresh="onChangeBalance"
     />
     <dialog-login
       :visible.sync="dialogLogin.visible"
@@ -789,6 +791,10 @@ export default {
       }
       this.pushLoading = true;
       this.onGetSkuList(listData);
+    },
+    // 弹窗操作更新余额
+    onChangeBalance(balance) {
+      this.balance = balance;
     },
   },
   watch: {

@@ -8,12 +8,18 @@
     @open="onOpen"
   >
     <div class="wrapper">
-      <el-form inline label-width="80px">
+      <el-form
+        inline
+        label-width="80px"
+        :model="order"
+        :rules="rules"
+        ref="form"
+      >
         <el-row :span="24">
           <el-col :span="12">
             <el-form-item label="订单编号">
               <el-input
-                placeholder="订单编号"
+                placeholder="选填，留空则随机生成"
                 size="mini"
                 v-model="order.orderNo"
                 style="width:200px"
@@ -42,7 +48,7 @@
           <el-col :span="12">
             <el-form-item label="买家昵称">
               <el-input
-                placeholder="买家昵称"
+                placeholder="选填，留空则随机生成"
                 size="mini"
                 v-model="order.buyerNickname"
                 style="width:200px"
@@ -52,7 +58,7 @@
           <el-col :span="12">
             <el-form-item label="买家UID">
               <el-input
-                placeholder="买家UID"
+                placeholder="选填，留空则随机生成"
                 size="mini"
                 v-model="order.buyerUid"
                 style="width:200px"
@@ -63,15 +69,22 @@
         <div class="line" />
         <div class="title">
           <div class="text">收件信息</div>
-          <el-checkbox
-            v-model="checked"
-            v-if="shopInfo && shopInfo.permissionUrgentOrder"
-            >加急订单</el-checkbox
-          >
+          <div>
+            <el-checkbox
+              v-model="isInner"
+              v-if="shopInfo && shopInfo.permissionInnerOrder"
+              >内部订单</el-checkbox
+            >
+            <el-checkbox
+              v-model="isUrgent"
+              v-if="shopInfo && shopInfo.permissionUrgentOrder"
+              >加急订单</el-checkbox
+            >
+          </div>
         </div>
         <el-row :span="16">
           <el-col :span="8">
-            <el-form-item label="联系人" required>
+            <el-form-item label="联系人" required prop="receiver">
               <el-input
                 placeholder="联系人"
                 size="mini"
@@ -80,7 +93,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="手机" required>
+            <el-form-item label="手机" required prop="phoneNumber">
               <el-input
                 placeholder="手机"
                 size="mini"
@@ -91,7 +104,12 @@
         </el-row>
         <el-row :span="24">
           <el-col :span="8">
-            <el-form-item label="省份" label-width="70px" required>
+            <el-form-item
+              label="省份"
+              label-width="70px"
+              required
+              prop="province"
+            >
               <el-select
                 v-model="order.province"
                 filterable
@@ -113,7 +131,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="城市" label-width="70px" required>
+            <el-form-item label="城市" label-width="70px" required prop="city">
               <el-select
                 v-model="order.city"
                 filterable
@@ -135,7 +153,12 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="行政区" label-width="70px" required>
+            <el-form-item
+              label="行政区"
+              label-width="70px"
+              required
+              prop="district"
+            >
               <el-select
                 v-model="order.district"
                 filterable
@@ -159,7 +182,12 @@
         </el-row>
         <el-row :span="24">
           <el-col :span="10">
-            <el-form-item label="街道/乡镇">
+            <el-form-item
+              label="街道/乡镇"
+              prop="street"
+              required
+              label-width="90px"
+            >
               <el-select
                 v-model="order.street"
                 filterable
@@ -181,7 +209,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="14">
-            <el-form-item label="详细地址" required>
+            <el-form-item label="详细地址" required prop="address">
               <el-input
                 placeholder="详细地址"
                 size="mini"
@@ -295,6 +323,10 @@ export default {
       type: Array || null,
       require: true,
     },
+    balance: {
+      type: Number || null,
+      require: true,
+    },
   },
   data: function() {
     return {
@@ -320,7 +352,8 @@ export default {
       },
       orderSkuList: [],
       detailAddress: "",
-      checked: false,
+      isUrgent: false,
+      isInner: false,
       systemError: "",
       errorStatus: false,
       error: {
@@ -330,6 +363,39 @@ export default {
       },
       isMore: false,
       moreRemarks: "",
+      rules: {
+        receiver: [
+          {
+            required: true,
+            message: "请输入联系人",
+            trigger: ["blur", "change"],
+          },
+        ],
+        phoneNumber: [
+          {
+            required: true,
+            message: "请输入手机",
+            trigger: ["blur", "change"],
+          },
+        ],
+        province: [
+          { required: true, message: "请选择省份", trigger: "change" },
+        ],
+        city: [{ required: true, message: "请选择城市", trigger: "change" }],
+        district: [
+          { required: true, message: "请选择行政区", trigger: "change" },
+        ],
+        street: [
+          { required: true, message: "请选择街道/乡镇", trigger: "change" },
+        ],
+        address: [
+          {
+            required: true,
+            message: "请输入详细地址",
+            trigger: ["blur", "change"],
+          },
+        ],
+      },
     };
   },
   computed: {
@@ -465,10 +531,16 @@ export default {
       const data = {
         list: [
           {
-            orderId: this.order.orderId,
+            orderId: this.order.orderId
+              ? this.order.orderId
+              : new Date().getTime(),
             cpCode: this.order.cpCode,
-            buyerNickname: this.order.buyerNickname,
-            buyerUid: this.order.buyerUid,
+            buyerNickname: this.order.buyerNickname
+              ? this.order.buyerNickname
+              : new Date().getTime(),
+            buyerUid: this.order.buyerUid
+              ? this.order.buyerUid
+              : new Date().getTime(),
             receiver: this.order.receiver,
             phoneNumber: this.order.phoneNumber,
             province: this.order.province,
@@ -480,8 +552,8 @@ export default {
             flag: 4,
             interceptReason: "",
             orderTime: this.order.orderTime,
-            innerOrder: false,
-            isUrgent: this.checked ? 1 : 0,
+            innerOrder: this.isInner ? 1 : 0,
+            isUrgent: this.isUrgent ? 1 : 0,
             orderSkuList: this.orderSkuList,
           },
         ],
@@ -508,8 +580,7 @@ export default {
               this.$message.error("推送失败");
             } else {
               this.error = [];
-              this.balance = balance;
-              const { logisticsNumber = "" } = ok[0];
+              this.$emit("refresh", balance);
               this.$message.success("推送成功");
               this.isVisible = false;
               this.loading = false;
@@ -520,6 +591,7 @@ export default {
           }
         })
         .catch((error) => {
+          console.log(error);
           this.loading = false;
         });
     },
@@ -543,7 +615,8 @@ export default {
       };
       this.orderSkuList = [];
       this.detailAddress = "";
-      this.checked = false;
+      this.isUrgent = false;
+      this.isInner = false;
       this.systemError = "";
       this.errorStatus = false;
       this.error = {
@@ -557,14 +630,26 @@ export default {
       this.cityList = [];
       this.districtList = [];
       this.streetList = [];
+      this.$refs["form"].resetFields();
     },
     onOpen() {
       this.onGetProvinceList();
       this.order.cpCode = this.logistics[0].cpCode;
     },
     onPush() {
-      this.loading = true;
-      this.onPushOrderJson(this.data);
+      if (this.orderSkuList.length === 0) {
+        this.$message.error("请至少添加一个子订单");
+        return;
+      }
+      this.$refs["form"].validate((valid) => {
+        if (valid) {
+          this.loading = true;
+          this.onPushOrderJson(this.data);
+        } else {
+          console.log("error submit!!");
+          return false;
+        }
+      });
     },
     onChangeAddress() {
       if (!this.detailAddress) return;
@@ -573,12 +658,17 @@ export default {
       };
       $.ajax({
         url: "//47.110.83.17:8700/api/common/address/parse",
-        type: "POST",
+        type: "GET",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
-        data: JSON.stringify(data),
+        headers: {
+          token: this.$root.token,
+        },
+        data: {
+          address: this.detailAddress,
+        },
       }).then((res) => {
-        let { addressDTO, personDTO } = res.data.data;
+        let { addressDTO, personDTO } = res.data;
         let citys = this.province.filter((item) => {
           return item.value == addressDTO.provId;
         });
@@ -593,10 +683,10 @@ export default {
         });
         this.streetList = streets[0].children;
 
-        this.order.province = `${addressDTO.provId}`;
-        this.order.city = `${addressDTO.cityId}`;
-        this.order.district = `${addressDTO.areaId}`;
-        this.order.street = `${addressDTO.townId}`;
+        this.order.province = `${addressDTO.provName}`;
+        this.order.city = `${addressDTO.cityName}`;
+        this.order.district = `${addressDTO.areaName}`;
+        this.order.street = `${addressDTO.townName}`;
         this.order.address = addressDTO.address;
         this.order.receiver = personDTO.userName;
         this.order.phoneNumber = personDTO.mobilePhone;
