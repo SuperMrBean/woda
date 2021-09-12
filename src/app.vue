@@ -34,7 +34,9 @@
         <el-button size="mini" style="margin-left:10px" type="primary"
           >查看回调记录</el-button
         >
-        <el-button size="mini" type="primary">历史订单查询</el-button>
+        <el-button size="mini" type="primary" @click="onOpenHistory"
+          >历史订单查询</el-button
+        >
         <el-button size="mini" type="primary" @click="onOpenFree"
           >添加自由订单</el-button
         >
@@ -320,6 +322,7 @@
       :data="dialogLogin.data"
       @refresh="onUpdateShopInfo"
     />
+    <dialog-history :visible.sync="dialogHistory.visible" />
   </div>
 </template>
 <script>
@@ -328,6 +331,7 @@ import dialogLogin from "./components/dialogLogin.vue";
 import dialogFlag from "./components/dialogFlag.vue";
 import dialogModify from "./components/dialogModify.vue";
 import dialogFree from "./components/dialogFree.vue";
+import dialogHistory from "./components/dialogHistory.vue";
 import { proxy } from "ajax-hook";
 import $ from "jquery";
 
@@ -337,6 +341,7 @@ export default {
     dialogFlag,
     dialogModify,
     dialogFree,
+    dialogHistory,
   },
   data: function() {
     return {
@@ -364,6 +369,9 @@ export default {
         data: null,
       },
       dialogFree: {
+        visible: false,
+      },
+      dialogHistory: {
         visible: false,
       },
     };
@@ -782,6 +790,9 @@ export default {
     },
     onOpenFree() {
       this.dialogFree.visible = true;
+    },
+    onOpenHistory() {
+      this.dialogHistory.visible = true;
     },
     // 点击推送，开始一些列推送请求
     onPush(listData) {
