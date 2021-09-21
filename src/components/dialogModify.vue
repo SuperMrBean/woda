@@ -636,7 +636,7 @@ export default {
               if (this.pushType === "send") {
                 this.onDelivery({ listData, logisticsNumber });
               } else {
-                alert(`保存单号：${logisticsNumber}`);
+                this.onSaveNumber(listData);
               }
             }
           } else {
@@ -691,6 +691,48 @@ export default {
         .catch((error) => {
           this.loading = false;
           console.log(error);
+        });
+    },
+    // 保存运单号
+    onSaveNumber(listData) {
+      const { defaultShopId = null } = this.userInfo || {};
+      const { trades = [] } = listData || {};
+      const { tid = "", sellerMemo = "", sellerFlag = "" } = trades[0] || {};
+      const data = {
+        apiMethodName: "taobao.trade.memo.update",
+        textParams: {
+          tid,
+          memo: `#已推送#\n${sellerMemo}`,
+          flag: sellerFlag,
+          reset: false,
+        },
+        shopId: defaultShopId,
+      };
+      $.ajax({
+        url: "//zft.topchitu.com/api/taobao",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        data: JSON.stringify(data),
+      })
+        .then((response) => {
+          const { trade_memo_update_response = null } = response || {};
+          if (trade_memo_update_response) {
+            this.$message.success("推送成功");
+            listData.isPush = true;
+            listData.trades[0].sellerFlag = sellerFlag;
+            listData.trades[0].sellerMemo = `#已推送#\n${sellerMemo}`;
+            this.isVisible = false;
+          } else {
+            this.$message.error(`推送失败`);
+          }
+          this.pushLoading = false;
+        })
+        .catch((error) => {
+          const { responseJSON = {} } = error || {};
+          const { subMsg = "", subCode = "" } = responseJSON || {};
+          this.$message.error(subMsg || subCode);
+          this.pushLoading = false;
         });
     },
     onClose() {

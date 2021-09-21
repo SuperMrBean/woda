@@ -31,7 +31,11 @@
             </el-select>
           </div>
         </div>
-        <el-button size="mini" style="margin-left:10px" type="primary"
+        <el-button
+          size="mini"
+          style="margin-left:10px"
+          type="primary"
+          @click="onOpenRecord"
           >查看回调记录</el-button
         >
         <el-button size="mini" type="primary" @click="onOpenHistory"
@@ -264,7 +268,16 @@
                         <div class="attention">
                           红旗备注，用以下货物替代原本订单货物进行推送
                         </div>
-                        <div class="memo">{{ tradeItem.sellerMemo }}</div>
+                        <div class="memo">
+                          <div
+                            v-for="(text, index) in tradeItem.sellerMemo.split(
+                              '\n'
+                            )"
+                            :key="index"
+                          >
+                            {{ text }}
+                          </div>
+                        </div>
                       </div>
                       <div class="tipsGreen" v-if="tradeItem.sellerFlag === 3">
                         <div class="attention">
@@ -323,6 +336,7 @@
       @refresh="onUpdateShopInfo"
     />
     <dialog-history :visible.sync="dialogHistory.visible" />
+    <dialog-record :visible.sync="dialogRecord.visible" />
   </div>
 </template>
 <script>
@@ -332,6 +346,7 @@ import dialogFlag from "./components/dialogFlag.vue";
 import dialogModify from "./components/dialogModify.vue";
 import dialogFree from "./components/dialogFree.vue";
 import dialogHistory from "./components/dialogHistory.vue";
+import dialogRecord from "./components/dialogRecord.vue";
 import { proxy } from "ajax-hook";
 import $ from "jquery";
 
@@ -342,6 +357,7 @@ export default {
     dialogModify,
     dialogFree,
     dialogHistory,
+    dialogRecord,
   },
   data: function() {
     return {
@@ -372,6 +388,9 @@ export default {
         visible: false,
       },
       dialogHistory: {
+        visible: false,
+      },
+      dialogRecord: {
         visible: false,
       },
     };
@@ -694,7 +713,7 @@ export default {
               if (this.pushType === "send") {
                 this.onDelivery({ listData, logisticsNumber });
               } else {
-                alert(`保存单号：${logisticsNumber}`);
+                this.onSaveNumber(listData);
               }
             }
           } else {
@@ -751,6 +770,47 @@ export default {
           console.log(error);
         });
     },
+    // 保存运单号
+    onSaveNumber(listData) {
+      const { defaultShopId = null } = this.userInfo || {};
+      const { trades = [] } = listData || {};
+      const { tid = "", sellerMemo = "", sellerFlag = "" } = trades[0] || {};
+      const data = {
+        apiMethodName: "taobao.trade.memo.update",
+        textParams: {
+          tid,
+          memo: `#已推送#\n${sellerMemo}`,
+          flag: sellerFlag,
+          reset: false,
+        },
+        shopId: defaultShopId,
+      };
+      $.ajax({
+        url: "//zft.topchitu.com/api/taobao",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        data: JSON.stringify(data),
+      })
+        .then((response) => {
+          const { trade_memo_update_response = null } = response || {};
+          if (trade_memo_update_response) {
+            this.$message.success("推送成功");
+            listData.isPush = true;
+            listData.trades[0].sellerFlag = sellerFlag;
+            listData.trades[0].sellerMemo = `#已推送#\n${sellerMemo}`;
+          } else {
+            this.$message.error(`推送失败`);
+          }
+          this.pushLoading = false;
+        })
+        .catch((error) => {
+          const { responseJSON = {} } = error || {};
+          const { subMsg = "", subCode = "" } = responseJSON || {};
+          this.$message.error(subMsg || subCode);
+          this.pushLoading = false;
+        });
+    },
     onLogin() {
       if (!this.userInfo) {
         this.$message.warning("用户数据加载中，请稍后");
@@ -785,7 +845,7 @@ export default {
         return;
       }
       this.dialogModify.visible = true;
-      this.dialogModify.data = JSON.parse(JSON.stringify(data));
+      this.dialogModify.data = data;
       this.dialogModify.index = index;
     },
     onOpenFree() {
@@ -793,6 +853,9 @@ export default {
     },
     onOpenHistory() {
       this.dialogHistory.visible = true;
+    },
+    onOpenRecord() {
+      this.dialogRecord.visible = true;
     },
     // 点击推送，开始一些列推送请求
     onPush(listData) {
