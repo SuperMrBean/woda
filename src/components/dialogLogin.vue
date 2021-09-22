@@ -58,7 +58,7 @@ export default {
       loginPwd: "",
       verifyCode: "",
       imgSrc: "",
-      apiSrc: "http://47.110.83.17:8700/api/auth/getVerify",
+      apiSrc: "http:https://ryanopen.prprp.com/api/auth/getVerify",
       captchaId: "",
       loading: false,
     };
@@ -78,7 +78,7 @@ export default {
   methods: {
     onGetShopInfo(token) {
       $.ajax({
-        url: "//47.110.83.17:8700/api/user/my_info",
+        url: "https://ryanopen.prprp.com/api/user/my_info",
         type: "GET",
         headers: {
           token,
@@ -154,7 +154,7 @@ export default {
           captchaId: this.captchaId,
         };
         $.ajax({
-          url: "//47.110.83.17:8700/api/auth/login",
+          url: "https://ryanopen.prprp.com/api/auth/login",
           type: "POST",
           contentType: "application/json; charset=utf-8",
           dataType: "json",
@@ -178,7 +178,7 @@ export default {
     },
     changeImgSrc() {
       $.ajax({
-        url: "//47.110.83.17:8700/api/auth/getBase64Verify",
+        url: "https://ryanopen.prprp.com/api/auth/getBase64Verify",
         type: "GET",
       })
         .then((response) => {

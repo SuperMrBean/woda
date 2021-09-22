@@ -353,7 +353,7 @@ export default {
         ...this.search,
       };
       $.ajax({
-        url: "//47.110.83.17:8700/api/order/shop_order/page",
+        url: "https://ryanopen.prprp.com/api/order/shop_order/page",
         type: "GET",
         headers: {
           token: this.$root.token,
@@ -411,7 +411,7 @@ export default {
       if (expandedRows.timeLine) return;
       const { id, skuCode } = expandedRows || {};
       $.ajax({
-        url: "//47.110.83.17:8700/api/order/sub_order/opLog/list",
+        url: "https://ryanopen.prprp.com/api/order/sub_order/opLog/list",
         type: "GET",
         headers: {
           token: this.$root.token,

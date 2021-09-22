@@ -45,7 +45,7 @@ export default {
         pageNo: this.pageNo,
       };
       $.ajax({
-        url: "//47.110.83.17:8700/api/callbackRecord/page",
+        url: "https://ryanopen.prprp.com/api/callbackRecord/page",
         type: "GET",
         headers: {
           token: this.$root.token,

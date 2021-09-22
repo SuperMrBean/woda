@@ -471,7 +471,7 @@ export default {
     // 获取省市区数据
     onGetProvinceList() {
       $.ajax({
-        url: "//47.110.83.17:8700/api/common/cascadingStreets",
+        url: "https://ryanopen.prprp.com/api/common/cascadingStreets",
         type: "GET",
         headers: {
           token: this.$root.token,
@@ -530,7 +530,7 @@ export default {
         }
       });
       $.ajax({
-        url: "//47.110.83.17:8700/api/product/parsePushSkuList",
+        url: "https://ryanopen.prprp.com/api/product/parsePushSkuList",
         type: "POST",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -556,7 +556,7 @@ export default {
     // 检查skuList
     onCheckSkuList() {
       $.ajax({
-        url: "//47.110.83.17:8700/api/product/parsePushSkuList",
+        url: "https://ryanopen.prprp.com/api/product/parsePushSkuList",
         type: "POST",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -610,7 +610,7 @@ export default {
         ],
       };
       $.ajax({
-        url: "//47.110.83.17:8700/api/order/json",
+        url: "https://ryanopen.prprp.com/api/order/json",
         type: "POST",
         headers: {
           token: this.$root.token,
@@ -706,7 +706,7 @@ export default {
         },
       ];
       $.ajax({
-        url: "//47.110.83.17:8700/api/callbackRecord/savePushOrder",
+        url: "https://ryanopen.prprp.com/api/callbackRecord/savePushOrder",
         type: "POST",
         contentType: "application/json; charset=utf-8",
         headers: {
@@ -896,7 +896,7 @@ export default {
         address: this.detailAddress,
       };
       $.ajax({
-        url: "//47.110.83.17:8700/api/common/address/parse",
+        url: "https://ryanopen.prprp.com/api/common/address/parse",
         type: "GET",
         contentType: "application/json; charset=utf-8",
         dataType: "json",

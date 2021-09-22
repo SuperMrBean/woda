@@ -463,7 +463,7 @@ export default {
     // 请求店铺信息并做店铺名字校验
     onGetShopInfo(token) {
       $.ajax({
-        url: "//47.110.83.17:8700/api/user/my_info",
+        url: "https://ryanopen.prprp.com/api/user/my_info",
         type: "GET",
         headers: {
           token,
@@ -484,7 +484,7 @@ export default {
     // 获取商家余额
     onGetBalance() {
       $.ajax({
-        url: "//47.110.83.17:8700/api/user/my_account",
+        url: "https://ryanopen.prprp.com/api/user/my_account",
         type: "GET",
         headers: {
           token: this.$root.token,
@@ -506,7 +506,7 @@ export default {
     // 请求快递列表
     onGetLogistics() {
       $.ajax({
-        url: "//47.110.83.17:8700/api/common/logistics/all",
+        url: "https://ryanopen.prprp.com/api/common/logistics/all",
         type: "GET",
         headers: {
           token: this.$root.token,
@@ -574,7 +574,7 @@ export default {
         }
       });
       $.ajax({
-        url: "//47.110.83.17:8700/api/product/parsePushSkuList",
+        url: "https://ryanopen.prprp.com/api/product/parsePushSkuList",
         type: "POST",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -694,7 +694,7 @@ export default {
         ],
       };
       $.ajax({
-        url: "//47.110.83.17:8700/api/order/json",
+        url: "https://ryanopen.prprp.com/api/order/json",
         type: "POST",
         headers: {
           token: this.$root.token,
@@ -796,7 +796,7 @@ export default {
         };
       });
       $.ajax({
-        url: "//47.110.83.17:8700/api/callbackRecord/savePushOrder",
+        url: "https://ryanopen.prprp.com/api/callbackRecord/savePushOrder",
         type: "POST",
         contentType: "application/json; charset=utf-8",
         headers: {
@@ -975,7 +975,7 @@ export default {
   mounted() {
     // setTimeout(() => {
     // $.ajax({
-    //   url: "http://47.110.83.17:8700/api/auth/login",
+    //   url: "http:https://ryanopen.prprp.com/api/auth/login",
     //   type: "POST",
     //   contentType: "application/json; charset=utf-8",
     //   dataType: "json",
