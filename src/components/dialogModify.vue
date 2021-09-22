@@ -545,11 +545,11 @@ export default {
             this.orderSkuList = skuList;
           } else {
             this.$message.error(`sku列表解析失败：${msg}`);
-            this.pushLoading = false;
+            this.loading = false;
           }
         })
         .catch((error) => {
-          this.pushLoading = false;
+          this.loading = false;
           console.log(error);
         });
     },
@@ -575,11 +575,11 @@ export default {
             this.orderSkuList = skuList;
           } else {
             this.$message.error(`sku列表解析失败：${msg}`);
-            this.pushLoading = false;
+            this.loading = false;
           }
         })
         .catch((error) => {
-          this.pushLoading = false;
+          this.loading = false;
           console.log(error);
         });
     },
@@ -636,7 +636,7 @@ export default {
               if (this.pushType === "send") {
                 this.onDelivery({ listData, logisticsNumber });
               } else {
-                this.onSaveNumber(listData);
+                this.onSaveRecord({ listData, logisticsNumber });
               }
             }
           } else {
@@ -652,13 +652,13 @@ export default {
     onDelivery({ listData, logisticsNumber }) {
       const { defaultShopId = null } = this.userInfo || {};
       const { contact_id = null } = this.defAddress || {};
-      const { cpCode = "" } = this.logistics[0] || {};
+      // const { cpCode = "" } = this.logistics[0] || {};
       const { trades = [] } = listData || {};
       const logisticsSendList = trades.map((trade) => {
         const { tid = "", orders = [] } = trade || {};
         return {
           cancelId: contact_id,
-          companyCode: cpCode,
+          companyCode: this.order.cpCode,
           isSplit: 1,
           outSid: logisticsNumber,
           senderId: contact_id,
@@ -693,8 +693,43 @@ export default {
           console.log(error);
         });
     },
-    // 保存运单号
-    onSaveNumber(listData) {
+    // 保存推送记录
+    onSaveRecord({ listData, logisticsNumber }) {
+      const { trades = [] } = listData || {};
+      const { tid = "" } = trades[0];
+      const list = [
+        {
+          logistics: this.order.cpCode,
+          logisticsNumber,
+          orderId: tid,
+          parentOrderId: tid,
+        },
+      ];
+      $.ajax({
+        url: "//47.110.83.17:8700/api/callbackRecord/savePushOrder",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        headers: {
+          token: this.$root.token,
+        },
+        data: JSON.stringify(list),
+      })
+        .then((response) => {
+          const { status = null, msg = "" } = response || {};
+          if (status === 200) {
+            this.onSaveRemark(listData);
+          } else {
+            this.$message.error(msg);
+            this.loading = false;
+          }
+        })
+        .catch((error) => {
+          this.loading = false;
+          console.log(error);
+        });
+    },
+    // 修改备注
+    onSaveRemark(listData) {
       const { defaultShopId = null } = this.userInfo || {};
       const { trades = [] } = listData || {};
       const { tid = "", sellerMemo = "", sellerFlag = "" } = trades[0] || {};
@@ -726,13 +761,13 @@ export default {
           } else {
             this.$message.error(`推送失败`);
           }
-          this.pushLoading = false;
+          this.loading = false;
         })
         .catch((error) => {
           const { responseJSON = {} } = error || {};
           const { subMsg = "", subCode = "" } = responseJSON || {};
           this.$message.error(subMsg || subCode);
-          this.pushLoading = false;
+          this.loading = false;
         });
     },
     onClose() {

@@ -54,7 +54,9 @@ export default {
       })
         .then(({ data: { records, total, size }, status, msg }) => {
           if (status === 200) {
-            console.log(data);
+            console.log(records);
+            console.log(total);
+            console.log(size);
           } else {
             this.$message.error(msg);
           }

@@ -246,6 +246,9 @@
                         >
                           推送
                         </el-button>
+                        <el-button @click="onSplit(item)">
+                          拆单
+                        </el-button>
                       </div>
                       <div
                         style="text-align:center;margin-top:10px;"
@@ -443,6 +446,13 @@ export default {
             if (address_result.length > 0) {
               this.addresses = address_result;
               this.defAddress = this.addresses.find((item) => item.get_def);
+            }
+          }
+          // 拦截合并订单接口并刷新列表
+          if (url.indexOf("/api/trade-pack/manual-merge-pack") > -1) {
+            // this.onRefresh();
+            if (!Array.isArray(JSON.parse(data))) {
+              this.onRefresh();
             }
           }
           handler.next(response);
@@ -644,7 +654,7 @@ export default {
     },
     // 推送
     onPushOrderJson(name, mobile, address, listData, skuList) {
-      const { trades = [], minPayTime = "" } = listData || {};
+      const { trades = [] } = listData || {};
       if (trades.length === 0) {
         this.$message.error("推送信息有误");
         return;
@@ -713,7 +723,7 @@ export default {
               if (this.pushType === "send") {
                 this.onDelivery({ listData, logisticsNumber });
               } else {
-                this.onSaveNumber(listData);
+                this.onSaveRecord({ listData, logisticsNumber });
               }
             }
           } else {
@@ -770,8 +780,44 @@ export default {
           console.log(error);
         });
     },
-    // 保存运单号
-    onSaveNumber(listData) {
+    // 保存推送记录
+    onSaveRecord({ listData, logisticsNumber }) {
+      const { trades = [] } = listData || {};
+      const { cpCode = "" } = this.logistics[0];
+      const { tid = "" } = trades[0];
+      const list = [
+        {
+          logistics: cpCode,
+          logisticsNumber,
+          orderId: tid,
+          parentOrderId: tid,
+        },
+      ];
+      $.ajax({
+        url: "//47.110.83.17:8700/api/callbackRecord/savePushOrder",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        headers: {
+          token: this.$root.token,
+        },
+        data: JSON.stringify(list),
+      })
+        .then((response) => {
+          const { status = null, msg = "" } = response || {};
+          if (status === 200) {
+            this.onSaveRemark(listData);
+          } else {
+            this.$message.error(msg);
+            this.pushLoading = false;
+          }
+        })
+        .catch((error) => {
+          this.pushLoading = false;
+          console.log(error);
+        });
+    },
+    // 修改备注
+    onSaveRemark(listData) {
       const { defaultShopId = null } = this.userInfo || {};
       const { trades = [] } = listData || {};
       const { tid = "", sellerMemo = "", sellerFlag = "" } = trades[0] || {};
@@ -809,6 +855,34 @@ export default {
           const { subMsg = "", subCode = "" } = responseJSON || {};
           this.$message.error(subMsg || subCode);
           this.pushLoading = false;
+        });
+    },
+    // 拆单
+    onSplit(listData) {
+      const { defaultShopId = null } = this.userInfo || {};
+      const { packId = "", trades = [] } = listData || {};
+      const data = {
+        packId,
+        oidList: trades.map((item) => item.tid),
+        tidList: trades.map((item) => item.tid),
+      };
+      $.ajax({
+        url: "//zft.topchitu.com/api/trade-pack/cancel-pack",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        data: JSON.stringify(data),
+        headers: {
+          shopid: defaultShopId,
+        },
+      })
+        .then((response) => {
+          if (response.length && response.length > 0) {
+            this.onRefresh();
+          }
+        })
+        .catch((error) => {
+          console.log(error);
         });
     },
     onLogin() {

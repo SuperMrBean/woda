@@ -104,9 +104,14 @@ export default {
     // 检测店铺名称是否相同
     onCheckName(userInfo, shopInfo, token) {
       const { defaultShopName = "" } = userInfo;
-      const { nickName = "" } = shopInfo;
-      console.log(userInfo);
-      console.log(shopInfo);
+      const { nickName = "", typeName = "" } = shopInfo;
+      if (typeName !== "taobao") {
+        this.$message.error("店铺类型不正确");
+        sessionStorage.removeItem("token");
+        this.$root.token = "";
+        this.changeImgSrc();
+        return;
+      }
       if (defaultShopName === nickName) {
         this.$message.success("登录成功");
         sessionStorage.setItem("token", token);
