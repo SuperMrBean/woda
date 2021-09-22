@@ -105,7 +105,7 @@ export default {
     onCheckName(userInfo, shopInfo, token) {
       const { defaultShopName = "" } = userInfo;
       const { nickName = "", typeName = "" } = shopInfo;
-      if (typeName !== "taobao") {
+      if (typeName !== "淘宝") {
         this.$message.error("店铺类型不正确");
         sessionStorage.removeItem("token");
         this.$root.token = "";

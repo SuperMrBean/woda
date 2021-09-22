@@ -730,44 +730,85 @@ export default {
     },
     // 修改备注
     onSaveRemark(listData) {
-      const { defaultShopId = null } = this.userInfo || {};
       const { trades = [] } = listData || {};
-      const { tid = "", sellerMemo = "", sellerFlag = "" } = trades[0] || {};
+      const tradeList = JSON.parse(JSON.stringify(trades));
+      this.onChangeRemark({ listData, tradeList });
+    },
+    // 修改备注api
+    onChangeRemark({ listData, tradeList }) {
+      if (tradeList.length === 0) {
+        this.onSplit(listData);
+      } else {
+        const { defaultShopId = null } = this.userInfo || {};
+        const { tid = "", sellerMemo = "", sellerFlag = "" } =
+          tradeList[0] || {};
+        const data = {
+          apiMethodName: "taobao.trade.memo.update",
+          textParams: {
+            tid,
+            memo: `#已推送#\n${sellerMemo}`,
+            flag: sellerFlag,
+            reset: false,
+          },
+          shopId: defaultShopId,
+        };
+        $.ajax({
+          url: "//zft.topchitu.com/api/taobao",
+          type: "POST",
+          contentType: "application/json; charset=utf-8",
+          dataType: "json",
+          data: JSON.stringify(data),
+        })
+          .then((response) => {
+            const { trade_memo_update_response = null } = response || {};
+            if (trade_memo_update_response) {
+              tradeList.splice(0, 1);
+              setTimeout(() => {
+                this.onChangeRemark({ listData, tradeList });
+              }, 1500);
+            } else {
+              this.loading = false;
+              this.$message.error(`推送失败`);
+            }
+          })
+          .catch((error) => {
+            const { responseJSON = {} } = error || {};
+            const { subMsg = "", subCode = "" } = responseJSON || {};
+            this.$message.error(subMsg || subCode);
+            this.loading = false;
+          });
+      }
+    },
+    // 拆单
+    onSplit(listData) {
+      const { defaultShopId = null } = this.userInfo || {};
+      const { packId = "", trades = [] } = listData || {};
       const data = {
-        apiMethodName: "taobao.trade.memo.update",
-        textParams: {
-          tid,
-          memo: `#已推送#\n${sellerMemo}`,
-          flag: sellerFlag,
-          reset: false,
-        },
-        shopId: defaultShopId,
+        packId,
+        oidList: trades.map((item) => item.tid),
+        tidList: trades.map((item) => item.tid),
       };
       $.ajax({
-        url: "//zft.topchitu.com/api/taobao",
+        url: "//zft.topchitu.com/api/trade-pack/cancel-pack",
         type: "POST",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         data: JSON.stringify(data),
+        headers: {
+          shopid: defaultShopId,
+        },
       })
         .then((response) => {
-          const { trade_memo_update_response = null } = response || {};
-          if (trade_memo_update_response) {
+          if (response.length && response.length > 0) {
             this.$message.success("推送成功");
-            listData.isPush = true;
-            listData.trades[0].sellerFlag = sellerFlag;
-            listData.trades[0].sellerMemo = `#已推送#\n${sellerMemo}`;
             this.isVisible = false;
-          } else {
-            this.$message.error(`推送失败`);
           }
           this.loading = false;
         })
         .catch((error) => {
-          const { responseJSON = {} } = error || {};
-          const { subMsg = "", subCode = "" } = responseJSON || {};
-          this.$message.error(subMsg || subCode);
+          this.$message.error("拆单失败");
           this.loading = false;
+          console.log(error);
         });
     },
     onClose() {

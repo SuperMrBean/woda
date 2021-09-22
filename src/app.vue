@@ -246,9 +246,6 @@
                         >
                           推送
                         </el-button>
-                        <el-button @click="onSplit(item)">
-                          拆单
-                        </el-button>
                       </div>
                       <div
                         style="text-align:center;margin-top:10px;"
@@ -454,6 +451,10 @@ export default {
             if (!Array.isArray(JSON.parse(data))) {
               this.onRefresh();
             }
+          }
+          // 拦截取消合并订单接口并刷新列表
+          if (url.indexOf("/api/trade-pack/cancel-pack") > -1) {
+            this.onRefresh();
           }
           handler.next(response);
         },
@@ -784,15 +785,16 @@ export default {
     onSaveRecord({ listData, logisticsNumber }) {
       const { trades = [] } = listData || {};
       const { cpCode = "" } = this.logistics[0];
-      const { tid = "" } = trades[0];
-      const list = [
-        {
+      const { tid: parentOrderId = "" } = trades[0];
+      const list = trades.map((trade) => {
+        const { tid = "" } = trade || {};
+        return {
           logistics: cpCode,
           logisticsNumber,
           orderId: tid,
-          parentOrderId: tid,
-        },
-      ];
+          parentOrderId,
+        };
+      });
       $.ajax({
         url: "//47.110.83.17:8700/api/callbackRecord/savePushOrder",
         type: "POST",
@@ -818,44 +820,54 @@ export default {
     },
     // 修改备注
     onSaveRemark(listData) {
-      const { defaultShopId = null } = this.userInfo || {};
       const { trades = [] } = listData || {};
-      const { tid = "", sellerMemo = "", sellerFlag = "" } = trades[0] || {};
-      const data = {
-        apiMethodName: "taobao.trade.memo.update",
-        textParams: {
-          tid,
-          memo: `#已推送#\n${sellerMemo}`,
-          flag: sellerFlag,
-          reset: false,
-        },
-        shopId: defaultShopId,
-      };
-      $.ajax({
-        url: "//zft.topchitu.com/api/taobao",
-        type: "POST",
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        data: JSON.stringify(data),
-      })
-        .then((response) => {
-          const { trade_memo_update_response = null } = response || {};
-          if (trade_memo_update_response) {
-            this.$message.success("推送成功");
-            listData.isPush = true;
-            listData.trades[0].sellerFlag = sellerFlag;
-            listData.trades[0].sellerMemo = `#已推送#\n${sellerMemo}`;
-          } else {
-            this.$message.error(`推送失败`);
-          }
-          this.pushLoading = false;
+      const tradeList = JSON.parse(JSON.stringify(trades));
+      this.onChangeRemark({ listData, tradeList });
+    },
+    // 修改备注api
+    onChangeRemark({ listData, tradeList }) {
+      if (tradeList.length === 0) {
+        this.onSplit(listData);
+      } else {
+        const { defaultShopId = null } = this.userInfo || {};
+        const { tid = "", sellerMemo = "", sellerFlag = "" } =
+          tradeList[0] || {};
+        const data = {
+          apiMethodName: "taobao.trade.memo.update",
+          textParams: {
+            tid,
+            memo: `#已推送#\n${sellerMemo}`,
+            flag: sellerFlag,
+            reset: false,
+          },
+          shopId: defaultShopId,
+        };
+        $.ajax({
+          url: "//zft.topchitu.com/api/taobao",
+          type: "POST",
+          contentType: "application/json; charset=utf-8",
+          dataType: "json",
+          data: JSON.stringify(data),
         })
-        .catch((error) => {
-          const { responseJSON = {} } = error || {};
-          const { subMsg = "", subCode = "" } = responseJSON || {};
-          this.$message.error(subMsg || subCode);
-          this.pushLoading = false;
-        });
+          .then((response) => {
+            const { trade_memo_update_response = null } = response || {};
+            if (trade_memo_update_response) {
+              tradeList.splice(0, 1);
+              setTimeout(() => {
+                this.onChangeRemark({ listData, tradeList });
+              }, 1500);
+            } else {
+              this.pushLoading = false;
+              this.$message.error(`推送失败`);
+            }
+          })
+          .catch((error) => {
+            const { responseJSON = {} } = error || {};
+            const { subMsg = "", subCode = "" } = responseJSON || {};
+            this.$message.error(subMsg || subCode);
+            this.pushLoading = false;
+          });
+      }
     },
     // 拆单
     onSplit(listData) {
@@ -878,7 +890,8 @@ export default {
       })
         .then((response) => {
           if (response.length && response.length > 0) {
-            this.onRefresh();
+            this.$message.success("推送成功");
+            this.pushLoading = false;
           }
         })
         .catch((error) => {
