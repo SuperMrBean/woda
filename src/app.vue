@@ -336,7 +336,10 @@
       @refresh="onUpdateShopInfo"
     />
     <dialog-history :visible.sync="dialogHistory.visible" />
-    <dialog-record :visible.sync="dialogRecord.visible" />
+    <dialog-record
+      :visible.sync="dialogRecord.visible"
+      :logistics="logistics"
+    />
   </div>
 </template>
 <script>

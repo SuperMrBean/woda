@@ -42,6 +42,7 @@
   </el-dialog>
 </template>
 <script>
+import md5 from "md5";
 export default {
   props: {
     visible: {
@@ -149,7 +150,7 @@ export default {
         this.loading = true;
         let data = {
           phone: loginName,
-          password: loginPwd,
+          password: md5(loginPwd),
           verifyCode,
           captchaId: this.captchaId,
         };
