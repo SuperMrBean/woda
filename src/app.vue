@@ -339,6 +339,8 @@
     <dialog-record
       :visible.sync="dialogRecord.visible"
       :logistics="logistics"
+      :userInfo="userInfo"
+      :defAddress="defAddress"
     />
   </div>
 </template>
