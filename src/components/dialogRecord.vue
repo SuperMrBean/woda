@@ -8,6 +8,11 @@
     @open="onOpen"
   >
     <div class="wrap">
+      <div class="operation">
+        <el-button type="primary" size="mini" @click="onDeliveryAll"
+          >一键发货</el-button
+        >
+      </div>
       <el-table :data="list" align="center" v-loading="loading">
         <!-- <el-table-column prop="date" label="图片" width="80">
           <template slot-scope="scope">
@@ -201,7 +206,53 @@ export default {
             this.onChangeStatus(id, 3);
             this.$message.error(`发货失败`);
           }
+        })
+        .catch((error) => {
           this.sendLoading = false;
+          console.log(error);
+        });
+    },
+    // 一键发货
+    onDeliveryAll() {
+      this.sendLoading = true;
+      const { defaultShopId = null } = this.userInfo || {};
+      const { contact_id = null } = this.defAddress || {};
+      const list = this.list.filter((item) => {
+        return item.status === 1;
+      });
+      const logisticsSendList = list.map((item) => {
+        const { logistics = "", logisticsNumber = "", orderId = "", id = "" } =
+          item || {};
+        return {
+          cancelId: contact_id,
+          companyCode: logistics,
+          isSplit: 1,
+          outSid: logisticsNumber,
+          senderId: contact_id,
+          tid: orderId,
+          subTid: orderId,
+        };
+      });
+      const data = {
+        logisticsSendList,
+        sendType: "offline",
+        shopId: defaultShopId,
+      };
+      $.ajax({
+        url: "//zft.topchitu.com/api/taobao/logistics-send",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        data: JSON.stringify(data),
+      })
+        .then((response) => {
+          const resList = response.map((item, index) => {
+            return {
+              id: list[index].id,
+              status: item.success ? 2 : 3,
+            };
+          });
+          this.onChangeStatusAll(resList);
         })
         .catch((error) => {
           this.sendLoading = false;
@@ -209,10 +260,12 @@ export default {
         });
     },
     onChangeStatus(id, status) {
-      const params = {
-        id,
-        status,
-      };
+      const params = [
+        {
+          id,
+          status,
+        },
+      ];
       $.ajax({
         url: "https://ryanopen.prprp.com/api/callbackRecord/updateStatus",
         type: "POST",
@@ -230,6 +283,31 @@ export default {
             } else {
               this.$message.success("发货成功");
             }
+            this.getRecordList();
+          } else {
+            this.$message.error("修改回调失败");
+          }
+          this.sendLoading = false;
+        })
+        .catch((error) => {
+          this.sendLoading = false;
+          console.log(error);
+        });
+    },
+    onChangeStatusAll(list) {
+      $.ajax({
+        url: "https://ryanopen.prprp.com/api/callbackRecord/updateStatus",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        headers: {
+          token: this.$root.token,
+        },
+        data: JSON.stringify(list),
+      })
+        .then((response) => {
+          const { status: code = null } = response || {};
+          if (code === 200) {
+            this.$message.success("操作成功");
             this.getRecordList();
           } else {
             this.$message.error("修改回调失败");
@@ -260,9 +338,14 @@ export default {
 };
 </script>
 <style lang="less" scoped>
-.dialogFlag {
+.dialogRecord {
   .wrap {
     width: 100%;
+    .operation {
+      display: flex;
+      justify-content: flex-end;
+      align-content: center;
+    }
   }
 }
 </style>

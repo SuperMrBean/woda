@@ -72,11 +72,18 @@
         <div class="line" />
         <div class="title">
           <div class="text">收件信息</div>
-          <el-checkbox
-            v-model="isUrgent"
-            v-if="shopInfo && shopInfo.permissionUrgentOrder"
-            >加急订单</el-checkbox
-          >
+          <div>
+            <el-checkbox
+              v-model="order.isUrgent"
+              v-if="shopInfo && shopInfo.permissionUrgentOrder"
+              >加急订单</el-checkbox
+            >
+            <el-checkbox
+              v-model="order.innerOrder"
+              v-if="shopInfo && shopInfo.permissionInnerOrder"
+              >内部订单</el-checkbox
+            >
+          </div>
         </div>
         <el-row :span="16">
           <el-col :span="8">
@@ -224,6 +231,16 @@
         placeholder="粘贴文本，可自动识别姓名、电话和地址。如：北京市朝阳区XX街道XX大厦XX楼XX室，张三，139****8888"
         type="textarea"
       ></el-input>
+      <div
+        class="editor-title"
+        v-if="shopInfo && shopInfo.permissionInterceptOrder"
+      >
+        <span class="sync">同步添加订单拦截信息</span>
+        <el-button type="text" @click="isShowEditor = !isShowEditor">{{
+          isShowEditor ? "隐藏" : "显示"
+        }}</el-button>
+      </div>
+      <Editor v-show="isShowEditor" ref="editor"></Editor>
       <el-table
         v-if="orderSkuList.length"
         :data="orderSkuList"
@@ -301,7 +318,11 @@
   </el-dialog>
 </template>
 <script>
+import Editor from "./editor.vue";
 export default {
+  components: {
+    Editor,
+  },
   props: {
     visible: {
       type: Boolean,
@@ -357,10 +378,12 @@ export default {
         address: "",
         fullAddress: "",
         orderTime: "",
+        interceptReason: null, // 截单信息 - 输入文本框内容
+        innerOrder: false, // 是否内部订单 布尔值
+        isUrgent: false,
       },
       orderSkuList: [],
       detailAddress: "",
-      isUrgent: false,
       systemError: "",
       errorStatus: false,
       error: {
@@ -369,6 +392,17 @@ export default {
         skuError: [],
       },
       isMore: false,
+      isShowEditor: false,
+      innerData: {
+        receiver: "仓库内部订单",
+        phoneNumber: 18888888888,
+        province: "湖南省",
+        city: "株洲市",
+        district: "云龙区",
+        street: "云龙大道",
+        address: "仓库内部订单",
+        interceptReason: "【仓库内部订单，交由主管处理】",
+      },
       moreRemarks: "",
       rules: {
         receiver: [
@@ -404,6 +438,20 @@ export default {
         ],
       },
     };
+  },
+  watch: {
+    "order.innerOrder": function() {
+      if (this.order.innerOrder) {
+        this.order = {
+          ...this.order,
+          ...this.innerData,
+        };
+        this.$refs.editor.setContent("仓库内部订单，交由主管处理");
+      } else {
+        Object.keys(this.innerData).forEach((key) => (this.order[key] = null));
+        this.$refs.editor.setContent("");
+      }
+    },
   },
   computed: {
     isVisible: {
@@ -601,10 +649,13 @@ export default {
             address: this.order.address,
             fullAddress: `${this.order.province}${this.order.city}${this.order.district}${this.order.street}${this.order.address}`,
             flag: 4,
-            interceptReason: "",
+            interceptReason:
+              this.$refs.editor.getContent() === "<p><br></p>"
+                ? ""
+                : this.$refs.editor.getContent(),
             orderTime: this.order.orderTime,
-            innerOrder: false,
-            isUrgent: this.isUrgent ? 1 : 0,
+            innerOrder: this.order.innerOrder,
+            isUrgent: this.order.isUrgent ? 1 : 0,
             orderSkuList: this.orderSkuList,
           },
         ],
@@ -828,10 +879,12 @@ export default {
         address: "",
         fullAddress: "",
         orderTime: "",
+        interceptReason: null, // 截单信息 - 输入文本框内容
+        innerOrder: false, // 是否内部订单 布尔值
+        isUrgent: false,
       };
       this.orderSkuList = [];
       this.detailAddress = "";
-      this.isUrgent = false;
       this.systemError = "";
       this.errorStatus = false;
       this.error = {
@@ -1025,6 +1078,13 @@ export default {
 <style lang="less" scoped>
 .dialogModify {
   .wrapper {
+    .editor-title {
+      display: flex;
+      justify-content: space-between;
+    }
+    .sync {
+      color: red;
+    }
     .line {
       margin-bottom: 20px;
       width: 100%;
