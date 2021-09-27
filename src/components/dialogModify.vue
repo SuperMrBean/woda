@@ -542,7 +542,9 @@ export default {
           this.streetList = streets[0].children;
         })
         .catch((error) => {
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 获取skuList
@@ -550,11 +552,28 @@ export default {
       const { trades = [] } = listData || {};
       let totalOrders = [];
       trades.forEach((trade) => {
-        const { orders = [] } = trade || {};
-        orders.forEach((order) => {
-          totalOrders.push(order);
-        });
+        const { orders = [], sellerFlag = null, sellerMemo = "" } = trade || {};
+        // 对红旗进行处理
+        if (sellerFlag === 1) {
+          let list = this.onHandleRedSkuList(sellerMemo);
+          if (!list) {
+            totalOrders = false;
+            return;
+          } else {
+            list.forEach((redOrder) => {
+              totalOrders.push(redOrder);
+            });
+          }
+        } else {
+          orders.forEach((order) => {
+            totalOrders.push(order);
+          });
+        }
       });
+      if (!totalOrders) {
+        this.loading = false;
+        return;
+      }
       let totalSku = [];
       totalOrders.forEach((order) => {
         const { outerSkuId = "", outerIid = "", num = null } = order || {};
@@ -598,7 +617,9 @@ export default {
         })
         .catch((error) => {
           this.loading = false;
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 检查skuList
@@ -628,7 +649,9 @@ export default {
         })
         .catch((error) => {
           this.loading = false;
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 推送到开放平台
@@ -697,6 +720,9 @@ export default {
         })
         .catch((error) => {
           this.loading = false;
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 发货
@@ -731,9 +757,9 @@ export default {
       })
         .then((response) => {
           if (response.every((item) => item.success)) {
+            listData.isPush = true;
             this.$message.success("推送成功");
             this.isVisible = false;
-            listData.isPush = true;
           } else {
             this.$message.error(`发货失败`);
           }
@@ -776,7 +802,9 @@ export default {
         })
         .catch((error) => {
           this.loading = false;
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 修改备注
@@ -813,6 +841,11 @@ export default {
           .then((response) => {
             const { trade_memo_update_response = null } = response || {};
             if (trade_memo_update_response) {
+              if (tradeList.length === 1) {
+                const { trades = [] } = listData || {};
+                trades[0].sellerMemo = `#已推送#\n${sellerMemo}`;
+                trades[0].sellerFlag = sellerFlag;
+              }
               tradeList.splice(0, 1);
               setTimeout(() => {
                 this.onChangeRemark({ listData, tradeList });
@@ -834,6 +867,14 @@ export default {
     onSplit(listData) {
       const { defaultShopId = null } = this.userInfo || {};
       const { packId = "", trades = [] } = listData || {};
+      // 如果只有一个订单，不需要进行拆单
+      if (trades.length === 1) {
+        this.$message.success("推送成功");
+        listData.isPush = true;
+        this.loading = false;
+        this.isVisible = false;
+        return;
+      }
       const data = {
         packId,
         oidList: trades.map((item) => item.tid),
@@ -1046,6 +1087,10 @@ export default {
       let text = this.moreRemarks;
       let regList = /(?<=\【)[^\【\】]+(?=\】)/g;
       let list = text.match(regList);
+      if (!list) {
+        this.$message.error("格式不对");
+        return;
+      }
       for (var i = 0; i < list.length; i++) {
         if (list[i] == "" || list[i] == null || typeof list[i] == undefined) {
           list.splice(i, 1);
@@ -1070,6 +1115,39 @@ export default {
       this.onCheckSkuList();
       this.moreRemarks = "";
       this.isMore = false;
+    },
+    onHandleRedSkuList(moreRemarks) {
+      if (moreRemarks == "") {
+        this.$message.error("红旗备注信息为空");
+        return false;
+      }
+      let text = moreRemarks;
+      let regList = /(?<=\【)[^\【\】]+(?=\】)/g;
+      let list = text.match(regList);
+      if (!list) {
+        this.$message.error("红旗备注格式不对");
+        return false;
+      }
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] == "" || list[i] == null || typeof list[i] == undefined) {
+          list.splice(i, 1);
+          i = i - 1;
+        }
+      }
+      // 去重
+      list = list.reduce((acc, cur) => {
+        const index = acc.findIndex((item) => item.skuCode === cur);
+        if (index > -1) {
+          acc[index].skuNum += 1;
+        } else {
+          acc.push({
+            outerSkuId: cur,
+            num: 1,
+          });
+        }
+        return acc;
+      }, []);
+      return list;
     },
   },
   mounted() {},

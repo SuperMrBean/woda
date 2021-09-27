@@ -99,7 +99,9 @@ export default {
         })
         .catch((error) => {
           this.loading = false;
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 检测店铺名称是否相同
@@ -173,7 +175,9 @@ export default {
           })
           .catch((error) => {
             this.loading = false;
-            console.log(error);
+            const { responseJSON = {} } = error || {};
+            const { msg = "" } = responseJSON || {};
+            this.$message.error(msg);
           });
       }
     },
@@ -194,7 +198,9 @@ export default {
           }
         })
         .catch((error) => {
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
   },

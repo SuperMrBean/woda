@@ -166,7 +166,9 @@ export default {
         })
         .catch((error) => {
           this.loading = false;
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 发货
@@ -291,7 +293,9 @@ export default {
         })
         .catch((error) => {
           this.sendLoading = false;
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     onChangeStatusAll(list) {
@@ -316,7 +320,9 @@ export default {
         })
         .catch((error) => {
           this.sendLoading = false;
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     onClose() {

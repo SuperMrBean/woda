@@ -437,7 +437,9 @@ export default {
           // this.streetList = streets[0].children;
         })
         .catch((error) => {
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 获取skuList
@@ -493,7 +495,9 @@ export default {
         })
         .catch((error) => {
           this.pushLoading = false;
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 检查skuList
@@ -523,7 +527,9 @@ export default {
         })
         .catch((error) => {
           this.pushLoading = false;
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 推送到开放平台
@@ -591,7 +597,9 @@ export default {
           }
         })
         .catch((error) => {
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
           this.loading = false;
         });
     },

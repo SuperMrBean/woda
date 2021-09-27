@@ -483,7 +483,9 @@ export default {
           }
         })
         .catch((error) => {
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 获取商家余额
@@ -505,7 +507,9 @@ export default {
           }
         })
         .catch((error) => {
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 请求快递列表
@@ -526,7 +530,9 @@ export default {
           }
         })
         .catch((error) => {
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 检测店铺名称是否相同
@@ -551,11 +557,28 @@ export default {
       const { trades = [] } = listData || {};
       let totalOrders = [];
       trades.forEach((trade) => {
-        const { orders = [] } = trade || {};
-        orders.forEach((order) => {
-          totalOrders.push(order);
-        });
+        const { orders = [], sellerFlag = null, sellerMemo = "" } = trade || {};
+        // 对红旗进行处理
+        if (sellerFlag === 1) {
+          let list = this.onHandleRedSkuList(sellerMemo);
+          if (!list) {
+            totalOrders = false;
+            return;
+          } else {
+            list.forEach((redOrder) => {
+              totalOrders.push(redOrder);
+            });
+          }
+        } else {
+          orders.forEach((order) => {
+            totalOrders.push(order);
+          });
+        }
       });
+      if (!totalOrders) {
+        this.pushLoading = false;
+        return;
+      }
       let totalSku = [];
       totalOrders.forEach((order) => {
         const { outerSkuId = "", outerIid = "", num = null } = order || {};
@@ -599,7 +622,9 @@ export default {
         })
         .catch((error) => {
           this.pushLoading = false;
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 获取明文信息
@@ -739,7 +764,9 @@ export default {
         })
         .catch((error) => {
           this.pushLoading = false;
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 发货
@@ -820,7 +847,9 @@ export default {
         })
         .catch((error) => {
           this.pushLoading = false;
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     // 修改备注
@@ -857,6 +886,11 @@ export default {
           .then((response) => {
             const { trade_memo_update_response = null } = response || {};
             if (trade_memo_update_response) {
+              if (tradeList.length === 1) {
+                const { trades = [] } = listData || {};
+                trades[0].sellerMemo = `#已推送#\n${sellerMemo}`;
+                trades[0].sellerFlag = sellerFlag;
+              }
               tradeList.splice(0, 1);
               setTimeout(() => {
                 this.onChangeRemark({ listData, tradeList });
@@ -878,6 +912,12 @@ export default {
     onSplit(listData) {
       const { defaultShopId = null } = this.userInfo || {};
       const { packId = "", trades = [] } = listData || {};
+      if (trades.length === 1) {
+        this.$message.success("推送成功");
+        listData.isPush = true;
+        this.pushLoading = false;
+        return;
+      }
       const data = {
         packId,
         oidList: trades.map((item) => item.tid),
@@ -962,6 +1002,40 @@ export default {
     onChangeBalance(balance) {
       this.balance = balance;
     },
+    onHandleGreenSkuList(remark) {},
+    onHandleRedSkuList(moreRemarks) {
+      if (moreRemarks == "") {
+        this.$message.error("红旗备注信息为空");
+        return false;
+      }
+      let text = moreRemarks;
+      let regList = /(?<=\【)[^\【\】]+(?=\】)/g;
+      let list = text.match(regList);
+      if (!list) {
+        this.$message.error("红旗备注格式不对");
+        return false;
+      }
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] == "" || list[i] == null || typeof list[i] == undefined) {
+          list.splice(i, 1);
+          i = i - 1;
+        }
+      }
+      // 去重
+      list = list.reduce((acc, cur) => {
+        const index = acc.findIndex((item) => item.skuCode === cur);
+        if (index > -1) {
+          acc[index].skuNum += 1;
+        } else {
+          acc.push({
+            outerSkuId: cur,
+            num: 1,
+          });
+        }
+        return acc;
+      }, []);
+      return list;
+    },
   },
   watch: {
     userInfo(pre, cur) {
@@ -978,76 +1052,6 @@ export default {
     },
   },
   mounted() {
-    // setTimeout(() => {
-    // $.ajax({
-    //   url: "http:https://ryanopen.prprp.com/api/auth/login",
-    //   type: "POST",
-    //   contentType: "application/json; charset=utf-8",
-    //   dataType: "json",
-    //   data: JSON.stringify({
-    //     password: "123",
-    //     phone: "123",
-    //     verifyCode: "123",
-    //   }),
-    // })
-    //   .then((response) => {
-    //     console.log(response);
-    //   })
-    //   .catch((error) => {
-    //     console.log(error);
-    //   });
-    // $.post(
-    //   "http://tc1.woda.com/printSend.do?m=batchSaveOutsid",
-    //   {
-    //     expressId: "50",
-    //     tableType: "0",
-    //     keyTidCtids: JSON.stringify({
-    //       "1345442199065381079": ["1345442199065381079"],
-    //     }),
-    //     expressTemplateId: "934771",
-    //     expressTemplateName: "韵达手动填单号",
-    //     expressTemplateKind: "0",
-    //     keyTidOutsid: JSON.stringify({
-    //       "1345442199065381079": "4315697655846",
-    //     }),
-    //     tidSelectedOids: JSON.stringify({
-    //       "1345442199065381079": [
-    //         "1345442199066381079",
-    //         "1345442199067381079",
-    //       ],
-    //     }),
-    //   },
-    //   (res) => {
-    //     let originData = list.find((item) => item.keyTid === id);
-    //     const { data = {} } = JSON.parse(res) || {};
-    //     Object.assign(originData, { ...data[id] });
-    //     ids.shift();
-    //     getItemData(ids);
-    //   }
-    // );
-    // const data = {
-    //   encryptedAddressList: [
-    //     {
-    //       objectId: "0",
-    //       tidList: ["1375708800108342399"],
-    //       receiverName: "陆**",
-    //       receiverMobile: "*******2559",
-    //       receiverAddress: "兰*街道**小区*区**号楼",
-    //       oaid:
-    //         "1fIsMXCesa3podkGKmoaG551FoRlPHBwzojw57icDxxf6D1Rr369f7H98aj0ezpfNpYg6Q7m",
-    //     },
-    //   ],
-    //   decryptAuthType: "SHOP",
-    //   targetId: 1820,
-    // };
-    // $.ajax({
-    //   url: "https://zft.topchitu.com/api/security/batch-decrypt-address",
-    //   type: "POST",
-    //   contentType: "application/json; charset=utf-8",
-    //   dataType: "json",
-    //   data: JSON.stringify(data),
-    // });
-    // }, 6000);
     this.onInitProxy();
   },
 };

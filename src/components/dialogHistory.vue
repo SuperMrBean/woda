@@ -404,7 +404,9 @@ export default {
         })
         .catch((error) => {
           this.loading = false;
-          console.log(error);
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
         });
     },
     onClose() {
