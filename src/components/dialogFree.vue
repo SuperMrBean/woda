@@ -762,6 +762,10 @@ export default {
       let text = this.moreRemarks;
       let regList = /(?<=\【)[^\【\】]+(?=\】)/g;
       let list = text.match(regList);
+      if (!list) {
+        this.$message.error("格式不对");
+        return;
+      }
       for (var i = 0; i < list.length; i++) {
         if (list[i] == "" || list[i] == null || typeof list[i] == undefined) {
           list.splice(i, 1);
