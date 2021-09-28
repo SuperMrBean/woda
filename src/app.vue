@@ -432,7 +432,6 @@ export default {
                 orderErrorList: [],
               };
             });
-            console.log(this.list);
           }
           // 拦截用户信息
           if (url.indexOf("/user/login-user") > -1) {
@@ -560,11 +559,25 @@ export default {
         const { orders = [], sellerFlag = null, sellerMemo = "" } = trade || {};
         // 对红旗进行处理
         if (sellerFlag === 1) {
-          let list = this.onHandleRedSkuList(sellerMemo);
+          let list = this.onHandleRemarkSkuList(sellerMemo);
           if (!list) {
             totalOrders = false;
             return;
           } else {
+            list.forEach((redOrder) => {
+              totalOrders.push(redOrder);
+            });
+          }
+          // 对绿旗进行处理
+        } else if (sellerFlag === 3) {
+          let list = this.onHandleRemarkSkuList(sellerMemo);
+          if (!list) {
+            totalOrders = false;
+            return;
+          } else {
+            orders.forEach((order) => {
+              totalOrders.push(order);
+            });
             list.forEach((redOrder) => {
               totalOrders.push(redOrder);
             });
@@ -1002,8 +1015,7 @@ export default {
     onChangeBalance(balance) {
       this.balance = balance;
     },
-    onHandleGreenSkuList(remark) {},
-    onHandleRedSkuList(moreRemarks) {
+    onHandleRemarkSkuList(moreRemarks) {
       if (moreRemarks == "") {
         this.$message.error("红旗备注信息为空");
         return false;
@@ -1023,9 +1035,9 @@ export default {
       }
       // 去重
       list = list.reduce((acc, cur) => {
-        const index = acc.findIndex((item) => item.skuCode === cur);
+        const index = acc.findIndex((item) => item.outerSkuId === cur);
         if (index > -1) {
-          acc[index].skuNum += 1;
+          acc[index].num += 1;
         } else {
           acc.push({
             outerSkuId: cur,
