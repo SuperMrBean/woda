@@ -6,6 +6,7 @@
     custom-class="dialogHistory"
     @close="onClose"
     @open="onOpen"
+    :close-on-click-modal="false"
   >
     <div class="wrap">
       <el-form class="form" label-width="140px" label-position="left">

@@ -6,6 +6,7 @@
     :visible.sync="isVisible"
     @close="onClose"
     @open="onOpen"
+    :close-on-click-modal="false"
   >
     <div class="loginBox">
       <div class="title">登录</div>

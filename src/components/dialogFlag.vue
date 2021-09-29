@@ -6,6 +6,7 @@
     custom-class="dialogFlag"
     @close="onClose"
     @open="onOpen"
+    :close-on-click-modal="false"
   >
     <div class="flag">
       <el-radio-group v-model="sellerFlag">

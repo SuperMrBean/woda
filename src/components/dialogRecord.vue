@@ -6,6 +6,7 @@
     custom-class="dialogRecord"
     @close="onClose"
     @open="onOpen"
+    :close-on-click-modal="false"
   >
     <div class="wrap">
       <div class="operation">

@@ -6,6 +6,7 @@
     custom-class="dialogModify"
     @close="onClose"
     @open="onOpen"
+    :close-on-click-modal="false"
   >
     <div class="wrapper">
       <el-form
@@ -252,6 +253,7 @@
               v-model="scope.row.skuNum"
               size="mini"
               placeholder="数量"
+              @input="onChangeSkuNum(scope.$index, scope.row)"
             ></el-input>
           </template>
         </el-table-column>
@@ -293,7 +295,12 @@
         >
       </div>
     </div>
-    <el-dialog title="快速添加" :visible.sync="isMore" append-to-body>
+    <el-dialog
+      title="快速添加"
+      :visible.sync="isMore"
+      append-to-body
+      :close-on-click-modal="false"
+    >
       <el-input type="textarea" :rows="12" v-model="moreRemarks"></el-input>
       <div slot="footer" class="dialog-footer">
         <el-button size="mini" @click="onMoreCencel">取 消</el-button>
@@ -790,6 +797,18 @@ export default {
       this.onCheckSkuList();
       this.moreRemarks = "";
       this.isMore = false;
+    },
+    onChangeSkuNum(index, row) {
+      const num = Number(row.skuNum.replace(/[^\d]/g, ""));
+      if (num > 99999) {
+        row.skuNum = 99999;
+        return;
+      }
+      if (num <= 0) {
+        row.skuNum = 1;
+        return;
+      }
+      row.skuNum = num;
     },
   },
   mounted() {},
