@@ -69,10 +69,15 @@
             >
               <div class="left">
                 <div class="orderId">订单号：{{ item.trades[0].tid }}</div>
-                <div class="ali"><i class="icon" />{{ item.buyerNick }}</div>
+                <div class="ali" @click="onJumpAli(item.buyerNick)">
+                  <i class="icon" />{{ item.buyerNick }}
+                </div>
                 <div class="time">{{ item.minPayTime }}</div>
                 <div class="merge" v-if="item.isPacked">
                   有合并订单
+                </div>
+                <div class="refund" v-if="item.isRefund">
+                  订单有退款
                 </div>
               </div>
               <div class="right">
@@ -89,12 +94,21 @@
                 />
 
                 <el-tooltip
-                  v-if="item.trades[0].sellerMemo"
+                  v-if="item.trades[0].buyerMessage"
                   class="item"
                   effect="dark"
-                  :content="item.trades[0].sellerMemo"
                   placement="top-end"
                 >
+                  <div slot="content">
+                    <div
+                      v-for="(text, index) in item.trades[0].buyerMessage.split(
+                        '\n'
+                      )"
+                      :key="index"
+                    >
+                      {{ text }}
+                    </div>
+                  </div>
                   <i class="remark" />
                 </el-tooltip>
               </div>
@@ -149,12 +163,21 @@
                     }"
                   />
                   <el-tooltip
-                    v-if="tradeItem.sellerMemo"
+                    v-if="tradeItem.buyerMessage"
                     class="item"
                     effect="dark"
-                    :content="tradeItem.sellerMemo"
                     placement="top-end"
                   >
+                    <div slot="content">
+                      <div
+                        v-for="(text, index) in tradeItem.buyerMessage.split(
+                          '\n'
+                        )"
+                        :key="index"
+                      >
+                        {{ text }}
+                      </div>
+                    </div>
                     <i class="remark" />
                   </el-tooltip>
                 </div>
@@ -171,7 +194,16 @@
                         <img :src="orderItem.picPath" alt="" />
                       </div>
                       <div class="right">
-                        <div class="title">{{ orderItem.title }}</div>
+                        <div class="title">
+                          {{ orderItem.title }}
+                          <span
+                            class="orderRefund"
+                            v-if="
+                              orderItem.refundStatus === 'WAIT_SELLER_AGREE'
+                            "
+                            >退</span
+                          >
+                        </div>
                         <div class="desc ">
                           {{
                             orderItem.skuPropertiesName
@@ -224,10 +256,21 @@
                         <el-button
                           type="primary"
                           size="mini"
-                          v-if="tradeItem.sellerFlag === 2"
+                          v-if="
+                            item.trades.findIndex(
+                              (flag) => flag.sellerFlag === 2
+                            ) > -1
+                          "
                           style="background:#FFAB00;border-color:#FFAB00"
                         >
                           异常
+                        </el-button>
+                        <el-button
+                          type="danger"
+                          size="mini"
+                          v-else-if="item.isRefund"
+                        >
+                          有退款
                         </el-button>
                         <el-button
                           type="primary"
@@ -249,7 +292,9 @@
                       </div>
                       <div
                         style="text-align:center;margin-top:10px;"
-                        v-if="tradeIndex === 0 && !item.isPush"
+                        v-if="
+                          tradeIndex === 0 && !item.isPush && !item.isRefund
+                        "
                       >
                         <el-button
                           type="text"
@@ -262,7 +307,16 @@
                         <div class="attention">
                           黄旗备注，请按要求修改订单后再推送
                         </div>
-                        <div class="memo">{{ tradeItem.sellerMemo }}</div>
+                        <div class="memo">
+                          <div
+                            v-for="(text, index) in tradeItem.sellerMemo.split(
+                              '\n'
+                            )"
+                            :key="index"
+                          >
+                            {{ text }}
+                          </div>
+                        </div>
                       </div>
                       <div class="tipsRed" v-if="tradeItem.sellerFlag === 1">
                         <div class="attention">
@@ -283,7 +337,16 @@
                         <div class="attention">
                           绿旗备注，以下货物会追加到订单货物一起推送
                         </div>
-                        <div class="memo">{{ tradeItem.sellerMemo }}</div>
+                        <div class="memo">
+                          <div
+                            v-for="(text, index) in tradeItem.sellerMemo.split(
+                              '\n'
+                            )"
+                            :key="index"
+                          >
+                            {{ text }}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </el-col>
@@ -301,6 +364,14 @@
           </div>
         </div>
       </div>
+    </div>
+    <div class="progress" v-if="globalTimer">
+      <el-progress
+        :text-inside="true"
+        :stroke-width="20"
+        :percentage="(3 - globalTime) * 33"
+        status="exception"
+      ></el-progress>
     </div>
     <el-button v-if="isLogin" class="loadBtn" @click="onOpen" type="primary">{{
       show ? "关闭推送脚本" : "开启推送脚本"
@@ -321,6 +392,8 @@
       :logistics="logistics"
       :pushType="pushType"
       :defAddress="defAddress"
+      :globalTime="globalTime"
+      @lock="onLockPush"
       @refresh="onChangeBalance"
     />
     <dialog-free
@@ -377,6 +450,8 @@ export default {
       pushType: null,
       isLogin: false,
       pushLoading: false,
+      globalTime: 0,
+      globalTimer: null,
       dialogFlag: {
         visible: false,
         data: null,
@@ -424,11 +499,25 @@ export default {
           // 拦截列表信息
           if (url.indexOf("/trade-pack/find-pack-list") > -1) {
             const { content = [] } = JSON.parse(data) || {};
+            console.log(content);
             this.list = content.map((item) => {
+              // 是否有退款
+              let isRefund = false;
+              const { trades = [] } = item;
+              trades.forEach((trade) => {
+                const { orders = [] } = trade;
+                orders.forEach((order) => {
+                  const { refundStatus = "" } = order;
+                  if (refundStatus === "WAIT_SELLER_AGREE") {
+                    isRefund = true;
+                  }
+                });
+              });
               return {
                 ...item,
                 isSkuError: false,
                 isPush: false,
+                isRefund,
                 orderErrorList: [],
               };
             });
@@ -576,7 +665,10 @@ export default {
             return;
           } else {
             orders.forEach((order) => {
-              totalOrders.push(order);
+              const { refundStatus = "", status = "" } = order || {};
+              if (refundStatus !== "SUCCESS" && status !== "TRADE_CLOSED") {
+                totalOrders.push(order);
+              }
             });
             list.forEach((redOrder) => {
               totalOrders.push(redOrder);
@@ -584,7 +676,10 @@ export default {
           }
         } else {
           orders.forEach((order) => {
-            totalOrders.push(order);
+            const { refundStatus = "", status = "" } = order || {};
+            if (refundStatus !== "SUCCESS" && status !== "TRADE_CLOSED") {
+              totalOrders.push(order);
+            }
           });
         }
       });
@@ -989,6 +1084,11 @@ export default {
         this.$message.error("请选择推送后操作");
         return;
       }
+      if (this.globalTime !== 0) {
+        this.$message.error("3秒延迟中，请勿频繁操作");
+        return;
+      }
+      this.onLockPush();
       this.dialogModify.visible = true;
       this.dialogModify.data = data;
       this.dialogModify.index = index;
@@ -1008,7 +1108,15 @@ export default {
         this.$message.error("请选择推送后操作");
         return;
       }
+      if (this.globalTime !== 0) {
+        this.$message.error("3秒延迟中，请勿频繁操作");
+        return;
+      }
+      if (this.pushLoading) {
+        return;
+      }
       this.pushLoading = true;
+      this.onLockPush();
       this.onGetSkuList(listData);
     },
     // 弹窗操作更新余额
@@ -1047,6 +1155,25 @@ export default {
         return acc;
       }, []);
       return list;
+    },
+    onJumpAli(nickName) {
+      window.open(
+        `//amos.alicdn.com/msg.aw?v=2&uid=${nickName}&site=cntaobao&s=12&charset=utf-8`
+      );
+    },
+    onLockPush() {
+      if (this.globalTimer) {
+        return;
+      }
+      this.globalTime = 3;
+      this.globalTimer = setInterval(() => {
+        if (this.globalTime === 0) {
+          clearInterval(this.globalTimer);
+          this.globalTimer = null;
+        } else {
+          this.globalTime--;
+        }
+      }, 1000);
     },
   },
   watch: {

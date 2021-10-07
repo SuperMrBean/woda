@@ -5,11 +5,12 @@
 </template>
 <script>
 import E from "./wangEditor/src/js/index";
+import Axios from "../plugins/http";
 export default {
   props: {
     apiUrl: {
       type: String,
-      default: "/api/upload/files",
+      default: "https://ryanopen.prprp.com/api/upload/files",
     },
   },
   data: function() {

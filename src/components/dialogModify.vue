@@ -22,7 +22,7 @@
               <el-input
                 placeholder="订单编号"
                 size="mini"
-                v-model="order.orderNo"
+                v-model="order.orderId"
                 style="width:200px"
                 disabled
               ></el-input>
@@ -78,11 +78,6 @@
               v-model="order.isUrgent"
               v-if="shopInfo && shopInfo.permissionUrgentOrder"
               >加急订单</el-checkbox
-            >
-            <el-checkbox
-              v-model="order.innerOrder"
-              v-if="shopInfo && shopInfo.permissionInnerOrder"
-              >内部订单</el-checkbox
             >
           </div>
         </div>
@@ -256,8 +251,18 @@
               v-model="scope.row.skuCode"
               size="mini"
               placeholder="商家编码"
-              @blur="onCheckSkuList"
+              @blur="onCheckSkuItem(scope.$index, scope.row)"
             ></el-input>
+          </template>
+        </el-table-column>
+        <el-table-column prop="picUrl" label="图片">
+          <template slot-scope="scope" v-if="scope.row.picUrl">
+            <el-popover placement="top-start" trigger="hover">
+              <img :src="scope.row.picUrl" style="width:400px;height:400px" />
+              <div slot="reference">
+                <img :src="scope.row.picUrl" style="width:60px;height:60px" />
+              </div>
+            </el-popover>
           </template>
         </el-table-column>
         <el-table-column prop="skuNum" label="数量">
@@ -363,6 +368,10 @@ export default {
       type: Number || null,
       require: true,
     },
+    globalTime: {
+      type: Number || null,
+      require: true,
+    },
   },
   data: function() {
     return {
@@ -372,7 +381,7 @@ export default {
       districtList: [],
       streetList: [],
       order: {
-        orderNo: "",
+        orderId: "",
         cpCode: "",
         buyerNickname: "",
         buyerUid: "",
@@ -386,7 +395,6 @@ export default {
         fullAddress: "",
         orderTime: "",
         interceptReason: null, // 截单信息 - 输入文本框内容
-        innerOrder: false, // 是否内部订单 布尔值
         isUrgent: false,
       },
       orderSkuList: [],
@@ -400,16 +408,6 @@ export default {
       },
       isMore: false,
       isShowEditor: false,
-      innerData: {
-        receiver: "仓库内部订单",
-        phoneNumber: 18888888888,
-        province: "湖南省",
-        city: "株洲市",
-        district: "云龙区",
-        street: "云龙大道",
-        address: "仓库内部订单",
-        interceptReason: "【仓库内部订单，交由主管处理】",
-      },
       moreRemarks: "",
       rules: {
         receiver: [
@@ -445,20 +443,6 @@ export default {
         ],
       },
     };
-  },
-  watch: {
-    "order.innerOrder": function() {
-      if (this.order.innerOrder) {
-        this.order = {
-          ...this.order,
-          ...this.innerData,
-        };
-        this.$refs.editor.setContent("仓库内部订单，交由主管处理");
-      } else {
-        Object.keys(this.innerData).forEach((key) => (this.order[key] = null));
-        this.$refs.editor.setContent("");
-      }
-    },
   },
   computed: {
     isVisible: {
@@ -579,7 +563,10 @@ export default {
             return;
           } else {
             orders.forEach((order) => {
-              totalOrders.push(order);
+              const { refundStatus = "", status = "" } = order || {};
+              if (refundStatus !== "SUCCESS" && status !== "TRADE_CLOSED") {
+                totalOrders.push(order);
+              }
             });
             list.forEach((redOrder) => {
               totalOrders.push(redOrder);
@@ -587,7 +574,10 @@ export default {
           }
         } else {
           orders.forEach((order) => {
-            totalOrders.push(order);
+            const { refundStatus = "", status = "" } = order || {};
+            if (refundStatus !== "SUCCESS" && status !== "TRADE_CLOSED") {
+              totalOrders.push(order);
+            }
           });
         }
       });
@@ -611,10 +601,20 @@ export default {
               totalSku.push(item);
             });
           } else {
-            totalSku.push({ skuCode: sku, skuNum: num });
+            totalSku.push({
+              skuCode: sku,
+              skuNum: num,
+              errorInfo: "",
+              picUrl: "",
+            });
           }
         } else {
-          totalSku.push({ skuCode: "", skuNum: num });
+          totalSku.push({
+            skuCode: "",
+            skuNum: num,
+            picUrl: "",
+            errorInfo: "",
+          });
         }
       });
       $.ajax({
@@ -698,7 +698,7 @@ export default {
                 ? ""
                 : this.$refs.editor.getContent(),
             orderTime: this.order.orderTime,
-            innerOrder: this.order.innerOrder,
+            innerOrder: false,
             isUrgent: this.order.isUrgent ? 1 : 0,
             orderSkuList: this.orderSkuList,
           },
@@ -928,7 +928,7 @@ export default {
       this.isVisible = false;
       this.loading = false;
       this.order = {
-        orderNo: "",
+        orderId: "",
         cpCode: "",
         buyerNickname: "",
         buyerUid: "",
@@ -942,7 +942,6 @@ export default {
         fullAddress: "",
         orderTime: "",
         interceptReason: null, // 截单信息 - 输入文本框内容
-        innerOrder: false, // 是否内部订单 布尔值
         isUrgent: false,
       };
       this.orderSkuList = [];
@@ -961,6 +960,8 @@ export default {
       this.districtList = [];
       this.streetList = [];
       this.$refs["form"].resetFields();
+      this.isShowEditor = false;
+      this.$refs.editor.setContent("");
     },
     onOpen() {
       this.onGetProvinceList();
@@ -995,9 +996,17 @@ export default {
         this.$message.error("请至少添加一个子订单");
         return;
       }
+      if (this.globalTime !== 0) {
+        this.$message.error("3秒延迟中，请勿频繁操作");
+        return;
+      }
+      if (this.loading) {
+        return;
+      }
       this.$refs["form"].validate((valid) => {
         if (valid) {
           this.loading = true;
+          this.$emit("lock");
           this.onPushOrderJson(this.data);
         } else {
           console.log("error submit!!");
@@ -1080,6 +1089,8 @@ export default {
       this.orderSkuList.push({
         skuCode: null,
         skuNum: 1,
+        errorInfo: "",
+        picUrl: "",
       });
     },
     onAddSkus() {
@@ -1128,6 +1139,8 @@ export default {
           acc.push({
             skuCode: cur,
             skuNum: 1,
+            errorInfo: "",
+            picUrl: "",
           });
         }
         return acc;
@@ -1164,6 +1177,8 @@ export default {
           acc.push({
             outerSkuId: cur,
             num: 1,
+            errorInfo: "",
+            picUrl: "",
           });
         }
         return acc;
@@ -1181,6 +1196,54 @@ export default {
         return;
       }
       row.skuNum = num;
+    },
+    onLockPush() {
+      if (this.globalTimer) {
+        return;
+      }
+      this.globalTime = 3;
+      this.globalTimer = setInterval(() => {
+        if (this.globalTime === 0) {
+          clearInterval(this.globalTimer);
+          this.globalTimer = null;
+        } else {
+          this.globalTime--;
+        }
+      }, 1000);
+    },
+    // 检查skuItem
+    onCheckSkuItem(index, item) {
+      if (!item.skuCode) {
+        return;
+      }
+      $.ajax({
+        url: "https://ryanopen.prprp.com/api/product/parsePushSkuList",
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        headers: {
+          token: this.$root.token,
+        },
+        data: JSON.stringify([{ skuCode: item.skuCode, skuNum: item.skuNum }]),
+      })
+        .then((response) => {
+          const { status = null, msg = "", data: skuList = [] } = response;
+          if (status === 200) {
+            const { skuCode = "", skuNum = null, errorInfo = "", picUrl = "" } =
+              skuList[0] || {};
+            this.orderSkuList[index].skuCode = skuCode;
+            this.orderSkuList[index].skuNum = skuNum;
+            this.orderSkuList[index].errorInfo = errorInfo;
+            this.orderSkuList[index].picUrl = picUrl;
+          } else {
+            this.$message.error(`sku列表解析失败：${msg}`);
+          }
+        })
+        .catch((error) => {
+          const { responseJSON = {} } = error || {};
+          const { msg = "" } = responseJSON || {};
+          this.$message.error(msg);
+        });
     },
   },
   mounted() {},
