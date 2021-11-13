@@ -244,8 +244,18 @@
         :data="orderSkuList"
         style="width: 100%"
       >
-        <el-table-column label="子订单号">
+        <el-table-column label="子订单号" width="80">
           <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+        </el-table-column>
+        <el-table-column prop="picUrl" label="图片" width="100">
+          <template slot-scope="scope" v-if="scope.row.picUrl">
+            <el-popover placement="top-start" trigger="hover">
+              <img :src="scope.row.picUrl" style="width:400px;height:400px" />
+              <div slot="reference">
+                <img :src="scope.row.picUrl" style="width:60px;height:60px" />
+              </div>
+            </el-popover>
+          </template>
         </el-table-column>
         <el-table-column prop="skuCode" label="商家编码">
           <template slot-scope="scope">
@@ -255,16 +265,6 @@
               placeholder="商家编码"
               @blur="onCheckSkuItem(scope.$index, scope.row)"
             ></el-input>
-          </template>
-        </el-table-column>
-        <el-table-column prop="picUrl" label="图片">
-          <template slot-scope="scope" v-if="scope.row.picUrl">
-            <el-popover placement="top-start" trigger="hover">
-              <img :src="scope.row.picUrl" style="width:400px;height:400px" />
-              <div slot="reference">
-                <img :src="scope.row.picUrl" style="width:60px;height:60px" />
-              </div>
-            </el-popover>
           </template>
         </el-table-column>
         <el-table-column prop="skuNum" label="数量">
@@ -282,7 +282,7 @@
             <span class="sku-error">{{ scope.row.errorInfo }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作">
+        <el-table-column label="操作" width="100">
           <template slot-scope="scope">
             <el-button
               type="danger"
@@ -471,7 +471,7 @@ export default {
     // 获取省市区数据
     onGetProvinceList() {
       $.ajax({
-        url: "https://ryanopen.prprp.com/api/common/cascadingStreets",
+        url: "https://yh.prprp.com/api/common/cascadingStreets",
         type: "GET",
         headers: {
           token: this.$root.token,
@@ -536,8 +536,14 @@ export default {
           });
         }
       });
+      totalSku = totalSku.map((sku) => {
+        return {
+          skuCode: sku.skuCode,
+          skuNum: sku.skuNum,
+        };
+      });
       $.ajax({
-        url: "https://ryanopen.prprp.com/api/product/parsePushSkuList",
+        url: "https://yh.prprp.com/api/product/parsePushSkuList",
         type: "POST",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -565,7 +571,7 @@ export default {
     // 检查skuList
     onCheckSkuList() {
       $.ajax({
-        url: "https://ryanopen.prprp.com/api/product/parsePushSkuList",
+        url: "https://yh.prprp.com/api/product/parsePushSkuList",
         type: "POST",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -627,7 +633,7 @@ export default {
         ],
       };
       $.ajax({
-        url: "https://ryanopen.prprp.com/api/order/json",
+        url: "https://yh.prprp.com/api/order/json",
         type: "POST",
         headers: {
           token: this.$root.token,
@@ -730,7 +736,7 @@ export default {
         address: this.detailAddress,
       };
       $.ajax({
-        url: "https://ryanopen.prprp.com/api/common/address/parse",
+        url: "https://yh.prprp.com/api/common/address/parse",
         type: "GET",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -878,7 +884,7 @@ export default {
         return;
       }
       $.ajax({
-        url: "https://ryanopen.prprp.com/api/product/parsePushSkuList",
+        url: "https://yh.prprp.com/api/product/parsePushSkuList",
         type: "POST",
         contentType: "application/json; charset=utf-8",
         dataType: "json",

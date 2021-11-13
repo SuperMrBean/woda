@@ -69,8 +69,13 @@
             >
               <div class="left">
                 <div class="orderId">订单号：{{ item.trades[0].tid }}</div>
-                <div class="ali" @click="onJumpAli(item.buyerNick)">
-                  <i class="icon" />{{ item.buyerNick }}
+                <div class="ali">
+                  <i class="icon" /><a
+                    :href="
+                      `aliim:sendmsg?site=cntaobao&status=1&touid=cntaobao${item.buyerNick}`
+                    "
+                    >{{ item.buyerNick }}</a
+                  >
                 </div>
                 <div class="time">{{ item.minPayTime }}</div>
                 <div class="merge" v-if="item.isPacked">
@@ -81,7 +86,36 @@
                 </div>
               </div>
               <div class="right">
+                <el-tooltip
+                  class="item"
+                  effect="dark"
+                  placement="top-end"
+                  v-if="item.trades[0].sellerMemo"
+                >
+                  <div slot="content">
+                    <div
+                      v-for="(text, index) in item.trades[0].sellerMemo.split(
+                        '\n'
+                      )"
+                      :key="index"
+                    >
+                      {{ text }}
+                    </div>
+                  </div>
+                  <i
+                    @click="onOpenFlag(item.trades[0])"
+                    v-bind:class="{
+                      flagGrey: item.trades[0].sellerFlag === 0,
+                      flagRed: item.trades[0].sellerFlag === 1,
+                      flagYellow: item.trades[0].sellerFlag === 2,
+                      flagGreen: item.trades[0].sellerFlag === 3,
+                      flagBlue: item.trades[0].sellerFlag === 4,
+                      flagPurple: item.trades[0].sellerFlag === 5,
+                    }"
+                  />
+                </el-tooltip>
                 <i
+                  v-else
                   @click="onOpenFlag(item.trades[0])"
                   v-bind:class="{
                     flagGrey: item.trades[0].sellerFlag === 0,
@@ -92,7 +126,6 @@
                     flagPurple: item.trades[0].sellerFlag === 5,
                   }"
                 />
-
                 <el-tooltip
                   v-if="item.trades[0].buyerMessage"
                   class="item"
@@ -151,7 +184,36 @@
               >
                 <div class="left">子订单号：{{ tradeItem.tid }}</div>
                 <div class="right">
+                  <el-tooltip
+                    class="item"
+                    effect="dark"
+                    placement="top-end"
+                    v-if="tradeItem.sellerMemo"
+                  >
+                    <div slot="content">
+                      <div
+                        v-for="(text, index) in tradeItem.sellerMemo.split(
+                          '\n'
+                        )"
+                        :key="index"
+                      >
+                        {{ text }}
+                      </div>
+                    </div>
+                    <i
+                      @click="onOpenFlag(tradeItem)"
+                      v-bind:class="{
+                        flagGrey: tradeItem.sellerFlag === 0,
+                        flagRed: tradeItem.sellerFlag === 1,
+                        flagYellow: tradeItem.sellerFlag === 2,
+                        flagGreen: tradeItem.sellerFlag === 3,
+                        flagBlue: tradeItem.sellerFlag === 4,
+                        flagPurple: tradeItem.sellerFlag === 5,
+                      }"
+                    />
+                  </el-tooltip>
                   <i
+                    v-else
                     @click="onOpenFlag(tradeItem)"
                     v-bind:class="{
                       flagGrey: tradeItem.sellerFlag === 0,
@@ -203,6 +265,12 @@
                             "
                             >退</span
                           >
+                          <div
+                            class="orderRefund"
+                            v-if="orderItem.refundStatus === 'SUCCESS'"
+                          >
+                            退款成功
+                          </div>
                         </div>
                         <div class="desc ">
                           {{
@@ -556,7 +624,7 @@ export default {
     // 请求店铺信息并做店铺名字校验
     onGetShopInfo(token) {
       $.ajax({
-        url: "https://ryanopen.prprp.com/api/user/my_info",
+        url: "https://yh.prprp.com/api/user/my_info",
         type: "GET",
         headers: {
           token,
@@ -579,7 +647,7 @@ export default {
     // 获取商家余额
     onGetBalance() {
       $.ajax({
-        url: "https://ryanopen.prprp.com/api/user/my_account",
+        url: "https://yh.prprp.com/api/user/my_account",
         type: "GET",
         headers: {
           token: this.$root.token,
@@ -603,7 +671,7 @@ export default {
     // 请求快递列表
     onGetLogistics() {
       $.ajax({
-        url: "https://ryanopen.prprp.com/api/common/logistics/all",
+        url: "https://yh.prprp.com/api/common/logistics/all",
         type: "GET",
         headers: {
           token: this.$root.token,
@@ -709,8 +777,14 @@ export default {
           totalSku.push({ skuCode: "", skuNum: num });
         }
       });
+      totalSku = totalSku.map((sku) => {
+        return {
+          skuCode: sku.skuCode,
+          skuNum: sku.skuNum,
+        };
+      });
       $.ajax({
-        url: "https://ryanopen.prprp.com/api/product/parsePushSkuList",
+        url: "https://yh.prprp.com/api/product/parsePushSkuList",
         type: "POST",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -832,7 +906,7 @@ export default {
         ],
       };
       $.ajax({
-        url: "https://ryanopen.prprp.com/api/order/json",
+        url: "https://yh.prprp.com/api/order/json",
         type: "POST",
         headers: {
           token: this.$root.token,
@@ -936,7 +1010,7 @@ export default {
         };
       });
       $.ajax({
-        url: "https://ryanopen.prprp.com/api/callbackRecord/savePushOrder",
+        url: "https://yh.prprp.com/api/callbackRecord/savePushOrder",
         type: "POST",
         contentType: "application/json; charset=utf-8",
         headers: {
@@ -1155,11 +1229,6 @@ export default {
         return acc;
       }, []);
       return list;
-    },
-    onJumpAli(nickName) {
-      window.open(
-        `//amos.alicdn.com/msg.aw?v=2&uid=${nickName}&site=cntaobao&s=12&charset=utf-8`
-      );
     },
     onLockPush() {
       if (this.globalTimer) {

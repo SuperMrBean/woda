@@ -386,7 +386,7 @@ export default {
         ...this.search,
       };
       $.ajax({
-        url: "https://ryanopen.prprp.com/api/order/shop_order/page",
+        url: "https://yh.prprp.com/api/order/shop_order/page",
         type: "GET",
         headers: {
           token: this.$root.token,
@@ -446,7 +446,7 @@ export default {
       if (expandedRows.timeLine) return;
       const { id, skuCode } = expandedRows || {};
       $.ajax({
-        url: "https://ryanopen.prprp.com/api/order/sub_order/opLog/list",
+        url: "https://yh.prprp.com/api/order/sub_order/opLog/list",
         type: "GET",
         headers: {
           token: this.$root.token,
