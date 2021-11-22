@@ -1,6 +1,7 @@
 import Vue from "vue";
 import ElementUI from "element-ui";
 import "element-ui/lib/theme-chalk/index.css";
+import { onGetUrlParams } from "./plugins/utils";
 import App from "./app.vue";
 
 const wokooApp = document.createElement("div");
@@ -14,6 +15,11 @@ const vm = new Vue({
   data: function() {
     return {
       token: sessionStorage.getItem("token"), // 全局token
+      operator: localStorage.getItem("operator") || "",
+      env:
+        onGetUrlParams("env") && onGetUrlParams("env") === "test"
+          ? "yh-test"
+          : "yh",
     };
   },
 });

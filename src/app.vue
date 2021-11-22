@@ -7,6 +7,13 @@
           <div class="content">{{ shopInfo.phone }}</div>
         </div>
         <div class="item">
+          <div class="content">
+            <div class="user" @click="onOpenOperator">
+              {{ $root.operator ? $root.operator : "未设置操作人" }}
+            </div>
+          </div>
+        </div>
+        <div class="item">
           <div class="label">绑定店铺：</div>
           <div class="content">
             <span class="type">{{ shopInfo.typeName }}</span>
@@ -483,6 +490,7 @@
       :userInfo="userInfo"
       :defAddress="defAddress"
     />
+    <dialog-operator :visible.sync="dialogOperator.visible" />
   </div>
 </template>
 <script>
@@ -493,6 +501,7 @@ import dialogModify from "./components/dialogModify.vue";
 import dialogFree from "./components/dialogFree.vue";
 import dialogHistory from "./components/dialogHistory.vue";
 import dialogRecord from "./components/dialogRecord.vue";
+import dialogOperator from "./components/dialogOperator.vue";
 import { proxy } from "ajax-hook";
 import $ from "jquery";
 
@@ -504,6 +513,7 @@ export default {
     dialogFree,
     dialogHistory,
     dialogRecord,
+    dialogOperator,
   },
   data: function() {
     return {
@@ -539,6 +549,9 @@ export default {
         visible: false,
       },
       dialogRecord: {
+        visible: false,
+      },
+      dialogOperator: {
         visible: false,
       },
     };
@@ -624,7 +637,7 @@ export default {
     // 请求店铺信息并做店铺名字校验
     onGetShopInfo(token) {
       $.ajax({
-        url: "https://yh.prprp.com/api/user/my_info",
+        url: `https://${this.$root.env}.prprp.com/api/user/my_info`,
         type: "GET",
         headers: {
           token,
@@ -647,7 +660,7 @@ export default {
     // 获取商家余额
     onGetBalance() {
       $.ajax({
-        url: "https://yh.prprp.com/api/user/my_account",
+        url: `https://${this.$root.env}.prprp.com/api/user/my_account`,
         type: "GET",
         headers: {
           token: this.$root.token,
@@ -671,7 +684,7 @@ export default {
     // 请求快递列表
     onGetLogistics() {
       $.ajax({
-        url: "https://yh.prprp.com/api/common/logistics/all",
+        url: `https://${this.$root.env}.prprp.com/api/common/logistics/all`,
         type: "GET",
         headers: {
           token: this.$root.token,
@@ -781,10 +794,11 @@ export default {
         return {
           skuCode: sku.skuCode,
           skuNum: sku.skuNum,
+          isSpecial: sku.isSpecial ? true : false,
         };
       });
       $.ajax({
-        url: "https://yh.prprp.com/api/product/parsePushSkuList",
+        url: `https://${this.$root.env}.prprp.com/api/product/parsePushSkuList`,
         type: "POST",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -906,11 +920,12 @@ export default {
         ],
       };
       $.ajax({
-        url: "https://yh.prprp.com/api/order/json",
+        url: `https://${this.$root.env}.prprp.com/api/order/json`,
         type: "POST",
         headers: {
           token: this.$root.token,
           appid: this.shopInfo.appId,
+          operator: encodeURIComponent(this.$root.operator),
         },
         data: { orderJson: JSON.stringify(data) },
       })
@@ -1010,7 +1025,7 @@ export default {
         };
       });
       $.ajax({
-        url: "https://yh.prprp.com/api/callbackRecord/savePushOrder",
+        url: `https://${this.$root.env}.prprp.com/api/callbackRecord/savePushOrder`,
         type: "POST",
         contentType: "application/json; charset=utf-8",
         headers: {
@@ -1158,6 +1173,10 @@ export default {
         this.$message.error("请选择推送后操作");
         return;
       }
+      if (!this.$root.operator) {
+        this.$message.error("请填写操作人");
+        return;
+      }
       if (this.globalTime !== 0) {
         this.$message.error("3秒延迟中，请勿频繁操作");
         return;
@@ -1176,10 +1195,17 @@ export default {
     onOpenRecord() {
       this.dialogRecord.visible = true;
     },
+    onOpenOperator() {
+      this.dialogOperator.visible = true;
+    },
     // 点击推送，开始一些列推送请求
     onPush(listData) {
       if (!this.pushType) {
         this.$message.error("请选择推送后操作");
+        return;
+      }
+      if (!this.$root.operator) {
+        this.$message.error("请填写操作人");
         return;
       }
       if (this.globalTime !== 0) {

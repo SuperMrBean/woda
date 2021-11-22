@@ -60,7 +60,7 @@ export default {
       loginPwd: "",
       verifyCode: "",
       imgSrc: "",
-      apiSrc: "http:https://yh.prprp.com/api/auth/getVerify",
+      apiSrc: `https://${this.$root.env}.prprp.com/api/auth/getVerify`,
       captchaId: "",
       loading: false,
     };
@@ -80,7 +80,7 @@ export default {
   methods: {
     onGetShopInfo(token) {
       $.ajax({
-        url: "https://yh.prprp.com/api/user/my_info",
+        url: `https://${this.$root.env}.prprp.com/api/user/my_info`,
         type: "GET",
         headers: {
           token,
@@ -158,7 +158,7 @@ export default {
           captchaId: this.captchaId,
         };
         $.ajax({
-          url: "https://yh.prprp.com/api/auth/login",
+          url: `https://${this.$root.env}.prprp.com/api/auth/login`,
           type: "POST",
           contentType: "application/json; charset=utf-8",
           dataType: "json",
@@ -184,7 +184,7 @@ export default {
     },
     changeImgSrc() {
       $.ajax({
-        url: "https://yh.prprp.com/api/auth/getBase64Verify",
+        url: `https://${this.$root.env}.prprp.com/api/auth/getBase64Verify`,
         type: "GET",
       })
         .then((response) => {
