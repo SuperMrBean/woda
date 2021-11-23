@@ -317,8 +317,8 @@
                           `${item.encryptReceiverInfo.receiverCountry ||
                             ""} ${item.encryptReceiverInfo.receiverState ||
                             ""} ${item.encryptReceiverInfo.receiverCity ||
-                            ""} ${item.encryptReceiverInfo.receiverTown ||
                             ""} ${item.encryptReceiverInfo.receiverDistrict ||
+                            ""} ${item.encryptReceiverInfo.receiverTown ||
                             ""} ${item.encryptReceiverInfo.receiverAddress ||
                             ""}`
                         }}
@@ -567,6 +567,7 @@ export default {
       proxy({
         //请求发起前进入
         onRequest: (config, handler) => {
+          console.log(config);
           handler.next(config);
         },
         //请求发生错误时进入，比如超时；注意，不包括http状态码错误，如404仍然会认为请求成功
